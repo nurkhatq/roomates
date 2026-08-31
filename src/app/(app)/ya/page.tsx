@@ -1,10 +1,13 @@
-import { and, eq, isNull, asc } from 'drizzle-orm';
-import { db, items } from '@/db';
+import { db } from '@/db';
 import { requireSession } from '@/lib/session';
 import { householdBalances, myActivity, photoVersions, recentPurchases } from '@/lib/queries';
 import { money } from '@/lib/money';
 import { Card, Eyebrow, Empty, btnGhost } from '@/components/ui';
 import { MyProfile } from './MyProfile';
+import { PasswordForm } from './PasswordForm';
+import { ItemCard, type CardItem } from '../veshi/ItemCard';
+import { itemsWithEvents } from '@/lib/queries';
+import { stockState, checkDue, buySoon } from '@/lib/stock';
 import { t } from '@/lib/strings';
 import { fmtDayTime } from '@/lib/time';
 
@@ -20,11 +23,30 @@ export default async function MePage() {
     householdBalances(db, hid, s.roommates.map((m) => m.id)),
     myActivity(db, hid, s.member.id, ACTIONS_LIMIT),
     photoVersions(db, hid, [s.member.id]),
-    db.select().from(items)
-      .where(and(eq(items.householdId, hid), eq(items.ownerId, s.member.id), isNull(items.archivedAt)))
-      .orderBy(asc(items.name)),
+    itemsWithEvents(db, hid, 12),
     recentPurchases(db, hid, 20),
   ]);
+
+  // Свои вещи показываем такими же карточками, что и на полке: список из
+  // названий ничего не говорит, а фотография и остаток — говорят.
+  const now = new Date();
+  const mates = s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i, photoVersion: m.photoVersion }));
+  const myCards = mine.rows
+    .filter((r) => r.ownerId === s.member.id)
+    .map((r) => {
+      const st = stockState(mine.eventsBy.get(r.id) ?? [], r.checkIntervalDays, now);
+      return {
+        item: {
+          id: r.id, name: r.name, unit: r.unit, ownerId: r.ownerId,
+          checkIntervalDays: r.checkIntervalDays, price: r.price ?? null,
+          altUnit: r.altUnit ?? null, altQty: r.altQty ?? null, noRestock: r.noRestock,
+          hasPhoto: Boolean(r.hasPhoto), photoVersion: Number(r.photoVersion) || 0,
+        } satisfies CardItem,
+        st,
+        flag: checkDue(st, now) ? ('check' as const)
+          : !r.noRestock && buySoon(st, 3) ? ('buy' as const) : null,
+      };
+    });
 
   // Человек должен видеть, из чего сложился его долг, а не только итог.
   const breakdown = history.rows.map((p) => {
@@ -38,6 +60,8 @@ export default async function MePage() {
 
   return (
     <>
+      <PasswordForm hasPassword={Boolean(s.member.passwordHash)} />
+
       <MyProfile
         name={s.member.name}
         memberId={s.member.id}
@@ -80,22 +104,17 @@ export default async function MePage() {
         <p className="mt-2.5 text-[12px] text-ink-3">{t.money.breakdownHint}</p>
       </Card>
 
-      <Card>
-        <Eyebrow>{t.me.myThings}</Eyebrow>
-        {mine.length === 0 ? (
-          <Empty>{t.me.noMyThings}</Empty>
-        ) : (
-          <div className="flex flex-col">
-            {mine.map((i) => (
-              <div key={i.id} className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0">
-                <span className="min-w-0 flex-1 truncate text-[14px]">{i.name}</span>
-                <span className="num shrink-0 text-[12px] text-ink-3">{i.unit}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className="mt-2.5 text-[12px] text-ink-3">{t.me.myThingsHint}</p>
-      </Card>
+      <Eyebrow>{t.me.myThings}</Eyebrow>
+      {myCards.length === 0 ? (
+        <Card><Empty>{t.me.noMyThings}</Empty></Card>
+      ) : (
+        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {myCards.map((c) => (
+            <ItemCard key={c.item.id} item={c.item} st={c.st} flag={c.flag} mates={mates} />
+          ))}
+        </div>
+      )}
+      <p className="mb-3 text-[12px] text-ink-3">{t.me.myThingsHint}</p>
 
       <Card>
         <Eyebrow>{t.me.actions}</Eyebrow>

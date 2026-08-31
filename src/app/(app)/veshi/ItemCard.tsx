@@ -13,10 +13,10 @@ import { fmtDay } from '@/lib/time';
 export type CardItem = {
   id: string; name: string; unit: string; ownerId: string | null;
   checkIntervalDays: number; price: number | null;
-  altUnit: string | null; altQty: number | null;
+  altUnit: string | null; altQty: number | null; noRestock: boolean;
   hasPhoto: boolean; photoVersion: number;
 };
-type Mate = { id: string; name: string; index: number };
+type Mate = { id: string; name: string; index: number; photoVersion: number };
 
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -60,6 +60,7 @@ export function ItemCard({
         price: String(form.get('price') ?? '').trim() === '' ? null : Number(form.get('price')),
         altUnit: String(form.get('altUnit') ?? ''),
         altQty: String(form.get('altQty') ?? '').trim() === '' ? null : Number(form.get('altQty')),
+        noRestock: form.get('noRestock') === 'on',
         checkIntervalDays: Number(form.get('interval')),
       });
       setEditing(false);
@@ -179,6 +180,12 @@ export function ItemCard({
                       aria-label={t.things.altQty} />
                   </div>
                 </div>
+                <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                  <input type="checkbox" name="noRestock" defaultChecked={item.noRestock}
+                    className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+                  <span className="min-w-0 flex-1 text-[14px]">{t.things.noRestock}</span>
+                </label>
+
                 <label className="flex flex-col gap-1">
                   <span className={labelCls}>{t.things.interval}</span>
                   <input name="interval" type="number" inputMode="numeric" min="1"

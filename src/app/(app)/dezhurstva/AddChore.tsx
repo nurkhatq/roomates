@@ -4,7 +4,7 @@ import { addChore, type FormState } from '@/lib/actions/chores';
 import { Avatar, Card, btnPrimary, btnGhost, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
 
-type Mate = { id: string; name: string; index: number };
+type Mate = { id: string; name: string; index: number; photoVersion: number };
 
 export function AddChore({ mates }: { mates: Mate[] }) {
   const [open, setOpen] = useState(false);
@@ -52,7 +52,7 @@ export function AddChore({ mates }: { mates: Mate[] }) {
               <label key={m.id} className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-line last:border-b-0">
                 <input type="checkbox" name="order" value={m.id} checked={picked.includes(m.id)}
                   onChange={() => toggle(m.id)} className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
-                <Avatar name={m.name} index={m.index} size={26} />
+                <Avatar name={m.name} index={m.index} size={26} memberId={m.id} photoVersion={m.photoVersion} />
                 <span className="min-w-0 flex-1 truncate text-[14px]">{m.name}</span>
               </label>
             ))}

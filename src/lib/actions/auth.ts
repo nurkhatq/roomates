@@ -3,6 +3,7 @@
 import { eq, and, isNull, asc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { db, households, members } from '@/db';
+import { verifyPassword } from '@/lib/password';
 import { startSession, endSession, newInviteCode } from '@/lib/session';
 import { t } from '@/lib/strings';
 
@@ -34,11 +35,22 @@ export async function createHousehold(_prev: FormState, form: FormData): Promise
   redirect('/zakup');
 }
 
-export async function joinAs(memberId: string): Promise<void> {
-  const found = await db.select({ id: members.id, leftAt: members.leftAt })
+/**
+ * Вход под именем жильца. Если пароль уже поставлен — без него не пустит.
+ * Пока пароля нет, пускаем как раньше: иначе те, кто уже пользуется, окажутся
+ * заперты снаружи. Внутри система сразу попросит его завести.
+ */
+export async function joinAs(memberId: string, password?: string): Promise<FormState> {
+  const [m] = await db.select({ id: members.id, leftAt: members.leftAt, hash: members.passwordHash })
     .from(members).where(eq(members.id, memberId)).limit(1);
-  if (!found.length || found[0].leftAt) redirect('/');
-  await startSession(memberId);
+  if (!m || m.leftAt) redirect('/');
+
+  if (m.hash) {
+    if (!password) return { error: t.join.needPassword };
+    if (!verifyPassword(password, m.hash)) return { error: t.join.wrongPassword };
+  }
+
+  await startSession(m.id);
   redirect('/zakup');
 }
 

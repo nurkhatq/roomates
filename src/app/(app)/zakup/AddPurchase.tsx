@@ -2,11 +2,11 @@
 import { useActionState, useMemo, useState } from 'react';
 import { addPurchase, type FormState } from '@/lib/actions/purchases';
 import { splitEqual, money } from '@/lib/money';
-import { Avatar, Card, btnPrimary, btnGhost, inputCls, labelCls } from '@/components/ui';
+import { Avatar, Card, btnPrimary, btnGhost, btnPlain, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
 import { todayISO } from '@/lib/time';
 
-type Mate = { id: string; name: string; index: number };
+type Mate = { id: string; name: string; index: number; photoVersion: number };
 export type ShelfItem = {
   id: string; name: string; unit: string;
   price: number | null; altUnit: string | null; altQty: number | null; needed: boolean;
@@ -26,6 +26,8 @@ export function AddPurchase({
   const [open, setOpen] = useState(false);
   const [total, setTotal] = useState('');
   const [picked, setPicked] = useState<string[]>(roommates.map((m) => m.id));
+  const [splitMode, setSplitMode] = useState<'equal' | 'custom'>('equal');
+  const [custom, setCustom] = useState<Record<string, string>>({});
   const [lines, setLines] = useState<Record<string, Line>>({});
   const [showShelf, setShowShelf] = useState(false);
 
@@ -36,6 +38,7 @@ export function AddPurchase({
     if (res.ok) {
       setOpen(false); setTotal(''); setLines({}); setShowShelf(false);
       setPicked(roommates.map((m) => m.id));
+      setSplitMode('equal'); setCustom({});
     }
     return res;
   }, {} as FormState);
@@ -81,6 +84,11 @@ export function AddPurchase({
       return { ...l, [id]: { ...BLANK_LINE } };
     });
 
+  const customShares = picked
+    .map((id) => ({ memberId: id, amount: Math.round(Number(custom[id])) || 0 }))
+    .filter((x) => x.amount > 0);
+  const customSum = customShares.reduce((a, x) => a + x.amount, 0);
+
   const chosen = Object.entries(lines);
   const subtotal = chosen.reduce((a, [, v]) => a + (Math.round(Number(v.amount)) || 0), 0);
   const factorOf = (id: string, v: Line) => {
@@ -97,6 +105,8 @@ export function AddPurchase({
     <Card>
       <form action={action} className="flex flex-col gap-3.5">
         <input type="hidden" name="lines" value={JSON.stringify(payload)} />
+        <input type="hidden" name="splitMode" value={splitMode} />
+        <input type="hidden" name="shares" value={JSON.stringify(customShares)} />
 
         <label className="flex flex-col gap-1">
           <span className={labelCls}>{t.money.amount}</span>
@@ -187,20 +197,51 @@ export function AddPurchase({
 
         <div className="flex flex-col gap-1.5">
           <span className={labelCls}>{t.money.participants}</span>
-          <div className="flex flex-col">
-            {roommates.map((m) => (
-              <label key={m.id} className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-line last:border-b-0">
-                <input type="checkbox" name="participants" value={m.id}
-                  checked={picked.includes(m.id)} onChange={() => toggle(m.id)}
-                  className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
-                <Avatar name={m.name} index={m.index} size={26} />
-                <span className="min-w-0 flex-1 truncate text-[14px]">{m.name}</span>
-                {per.length > 0 && picked.includes(m.id) && (
-                  <span className="num shrink-0 text-[13px] text-ink-2">{money(per[picked.indexOf(m.id)])}</span>
-                )}
-              </label>
-            ))}
+
+          {/* Поровну — обычный случай. По-разному нужно, когда заказали еду и
+              у каждого своя позиция: там доли считать нечем, кроме как руками. */}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setSplitMode('equal')}
+              className={splitMode === 'equal' ? btnPlain : btnGhost}>{t.money.splitEqual}</button>
+            <button type="button" onClick={() => setSplitMode('custom')}
+              className={splitMode === 'custom' ? btnPlain : btnGhost}>{t.money.splitCustom}</button>
           </div>
+
+          <div className="flex flex-col">
+            {roommates.map((m) => {
+              const on = picked.includes(m.id);
+              return (
+                <label key={m.id} className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-line last:border-b-0">
+                  <input type="checkbox" name="participants" value={m.id}
+                    checked={on} onChange={() => toggle(m.id)}
+                    className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+                  <Avatar name={m.name} index={m.index} size={26} memberId={m.id} photoVersion={m.photoVersion} />
+                  <span className="min-w-0 flex-1 truncate text-[14px]">{m.name}</span>
+                  {splitMode === 'custom' ? (
+                    on && (
+                      <input value={custom[m.id] ?? ''} onFocus={(e) => e.target.select()}
+                        onChange={(e) => setCustom((c) => ({ ...c, [m.id]: e.target.value }))}
+                        type="number" inputMode="numeric" min="0" placeholder="тг"
+                        className={`${inputCls} num w-24 shrink-0 px-2 text-right`}
+                        aria-label={`${m.name}: сколько с него`} />
+                    )
+                  ) : (
+                    per.length > 0 && on && (
+                      <span className="num shrink-0 text-[13px] text-ink-2">{money(per[picked.indexOf(m.id)])}</span>
+                    )
+                  )}
+                </label>
+              );
+            })}
+          </div>
+
+          {splitMode === 'custom' && (
+            <p className="text-[12px] text-ink-3">
+              {customSum === amount && amount > 0
+                ? t.money.splitCustomHint
+                : `${t.money.remainder}: ${money(amount - customSum)}`}
+            </p>
+          )}
         </div>
 
         <label className="flex flex-col gap-1">

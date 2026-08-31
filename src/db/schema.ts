@@ -1,5 +1,5 @@
 import {
-  pgTable, text, integer, timestamp, uuid, doublePrecision,
+  pgTable, text, integer, boolean, timestamp, uuid, doublePrecision,
   primaryKey, index, uniqueIndex, jsonb,
 } from 'drizzle-orm/pg-core';
 
@@ -32,6 +32,13 @@ export const members = pgTable('members', {
   name: text('name').notNull(),
   /** Цвет кружка рядом с именем — чтобы различать в списках без фоток. */
   color: text('color').notNull(),
+  /**
+   * Пароль жильца. Код квартиры пускает в дом, пароль отвечает за то, что ты
+   * это ты: иначе любой, кому переслали ссылку, заходит под чужим именем и
+   * подтверждает переводы за него. Пусто — пароль ещё не поставлен, и система
+   * попросит его завести после входа.
+   */
+  passwordHash: text('password_hash'),
   /** Пусто сейчас; появится, когда прикрутим вход через Google. Схему менять не придётся. */
   oauthSub: text('oauth_sub'),
   leftAt: timestamp('left_at', { withTimezone: true }),
@@ -87,6 +94,12 @@ export const items = pgTable('items', {
   unit: text('unit').notNull().default('шт'),
   /** Первый срок пересчёта, который ставят руками. Дальше система подбирает сама. */
   checkIntervalDays: integer('check_interval_days').notNull().default(7),
+  /**
+   * Вещь не попадает в список закупа, даже когда кончилась. Молоток не
+   * кончается вовсе, а какая-то мелочь может кончиться — и пусть лежит
+   * пустая, покупать её никто не собирается.
+   */
+  noRestock: boolean('no_restock').notNull().default(false),
   /** Последняя известная цена за единицу. Обновляется при закупе. */
   price: integer('price'),
   /**

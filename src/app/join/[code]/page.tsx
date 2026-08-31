@@ -1,6 +1,6 @@
-import { eq, and, isNull, asc } from 'drizzle-orm';
+import { eq, and, isNull, asc, sql } from 'drizzle-orm';
 import Link from 'next/link';
-import { db, households, members } from '@/db';
+import { db, households, members, memberPhotos } from '@/db';
 import { Avatar, Card, btnGhost } from '@/components/ui';
 import { AddSelf } from './AddSelf';
 import { PickMe } from './PickMe';
@@ -24,7 +24,15 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
     );
   }
 
-  const roommates = await db.select().from(members)
+  // Хеш пароля наружу не отдаём — только сам факт, что он есть.
+  const roommates = await db
+    .select({
+      id: members.id, name: members.name,
+      hasPassword: sql<boolean>`(${members.passwordHash} is not null)`,
+      photoVersion: sql<number>`coalesce(extract(epoch from ${memberPhotos.updatedAt})::bigint, 0)`,
+    })
+    .from(members)
+    .leftJoin(memberPhotos, eq(memberPhotos.memberId, members.id))
     .where(and(eq(members.householdId, house.id), isNull(members.leftAt)))
     .orderBy(asc(members.createdAt));
 
@@ -35,9 +43,9 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
       <Card>
         <div className="flex flex-col">
           {roommates.map((m, i) => (
-            <PickMe key={m.id} id={m.id}>
-              <Avatar name={m.name} index={i} />
-              <span className="truncate text-[15px]">{m.name}</span>
+            <PickMe key={m.id} id={m.id} hasPassword={Boolean(m.hasPassword)}>
+              <Avatar name={m.name} index={i} memberId={m.id} photoVersion={Number(m.photoVersion) || 0} />
+              <span className="min-w-0 flex-1 truncate text-[15px]">{m.name}</span>
             </PickMe>
           ))}
           {roommates.length === 0 && (

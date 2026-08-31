@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function ChoresPage() {
   const s = await requireSession();
   const hid = s.household.id;
-  const mates = s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i }));
+  const mates = s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i, photoVersion: m.photoVersion }));
 
   const { rows, lastBy, tally } = await choresWithHistory(db, hid, mates.map((m) => m.id));
 
@@ -63,7 +63,7 @@ export default async function ChoresPage() {
         <div className="flex flex-col">
           {mates.map((m) => (
             <div key={m.id} className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0">
-              <Avatar name={m.name} index={m.index} size={26} />
+              <Avatar name={m.name} index={m.index} size={26} memberId={m.id} photoVersion={m.photoVersion} />
               <span className="min-w-0 flex-1 truncate text-[14px]">{m.name}</span>
               <span className="num text-[14px]">{tally.get(m.id) ?? 0} {t.chores.times}</span>
             </div>

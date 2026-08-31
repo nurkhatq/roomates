@@ -1,14 +1,25 @@
+import Image from 'next/image';
 import { personVar, initials } from '@/lib/colors';
 import { t } from '@/lib/strings';
 
-/** Кольцо, а не заливка: инициалы всегда на фоне карточки, контраст не зависит от цвета жильца. */
+/**
+ * Кружок жильца. Есть аватарка — показываем её, нет — инициалы.
+ *
+ * Кольцо цвета жильца остаётся в обоих случаях: по нему человека узнают в
+ * списке, а инициалы на кольце всегда лежат на фоне карточки, поэтому их
+ * контраст не зависит от того, какой цвет достался человеку.
+ */
 export function Avatar({
-  name, index, size = 30, dimmed = false,
-}: { name: string; index: number; size?: number; dimmed?: boolean }) {
+  name, index, size = 30, dimmed = false, memberId, photoVersion = 0,
+}: {
+  name: string; index: number; size?: number; dimmed?: boolean;
+  memberId?: string; photoVersion?: number;
+}) {
+  const hasPhoto = Boolean(memberId) && photoVersion > 0;
   return (
     <span
       aria-hidden="true"
-      className="inline-flex shrink-0 items-center justify-center rounded-full font-medium"
+      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-medium"
       style={{
         width: size, height: size,
         fontSize: Math.round(size * 0.4),
@@ -16,7 +27,12 @@ export function Avatar({
         opacity: dimmed ? 0.4 : 1,
       }}
     >
-      {initials(name)}
+      {hasPhoto ? (
+        <Image src={`/api/photo/member/${memberId}?v=${photoVersion}`} alt="" fill
+          sizes={`${size}px`} className="object-cover" unoptimized />
+      ) : (
+        initials(name)
+      )}
     </span>
   );
 }
@@ -29,10 +45,12 @@ export function Dot({ index, size = 8 }: { index: number; size?: number }) {
   );
 }
 
-export function Person({ name, index, you = false }: { name: string; index: number; you?: boolean }) {
+export function Person({
+  name, index, you = false, memberId, photoVersion,
+}: { name: string; index: number; you?: boolean; memberId?: string; photoVersion?: number }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
-      <Avatar name={name} index={index} size={26} />
+      <Avatar name={name} index={index} size={26} memberId={memberId} photoVersion={photoVersion} />
       <span className="truncate">{name}{you ? t.common.youSuffix : ''}</span>
     </span>
   );

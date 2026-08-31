@@ -24,12 +24,13 @@ export default async function VeshiPage() {
     .map((r) => {
       const st = stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now);
       const due = checkDue(st, now);
-      const low = buySoon(st, 3);
+      // Вещь с пометкой «не закупаем» в список закупа не просится никогда.
+      const low = !r.noRestock && buySoon(st, 3);
       return {
         item: {
           id: r.id, name: r.name, unit: r.unit, ownerId: r.ownerId,
           checkIntervalDays: r.checkIntervalDays, price: r.price ?? null,
-          altUnit: r.altUnit ?? null, altQty: r.altQty ?? null,
+          altUnit: r.altUnit ?? null, altQty: r.altQty ?? null, noRestock: r.noRestock,
           hasPhoto: Boolean(r.hasPhoto), photoVersion: Number(r.photoVersion) || 0,
         } satisfies CardItem,
         st,
@@ -42,7 +43,7 @@ export default async function VeshiPage() {
 
   const needAttention = cards.filter((c) => c.flag !== null).length;
   const unlogged = cards.filter((c) => c.st.unloggedPurchases > 0).length;
-  const mates = s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i }));
+  const mates = s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i, photoVersion: m.photoVersion }));
 
   return (
     <>

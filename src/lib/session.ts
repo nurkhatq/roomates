@@ -2,18 +2,21 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { eq, and, isNull, gt, asc } from 'drizzle-orm';
+import { eq, and, isNull, gt, asc, sql, getTableColumns } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
-import { db, sessions, members, households } from '@/db';
+import { db, sessions, members, households, memberPhotos } from '@/db';
 
 const COOKIE = 'hata_sid';
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
+/** Жилец плюс версия его аватарки — она нужна на каждом экране, где есть люди. */
+export type Mate = typeof members.$inferSelect & { photoVersion: number };
+
 export type Session = {
-  member: typeof members.$inferSelect;
+  member: Mate;
   household: typeof households.$inferSelect;
   /** Все жильцы квартиры, в порядке заселения — от него зависят цвета. */
-  roommates: (typeof members.$inferSelect)[];
+  roommates: Mate[];
 };
 
 /** Читается много раз за рендер одной страницы — кэшируем на запрос. */
@@ -32,13 +35,22 @@ export const getSession = cache(async (): Promise<Session | null> => {
   const row = rows[0];
   if (!row || row.member.leftAt) return null;
 
-  const roommates = await db
-    .select()
+  // Аватарки подтягиваются вместе с жильцами: иначе каждая страница ходила бы
+  // за ними отдельно, а люди показываются почти везде.
+  const roommates: Mate[] = await db
+    .select({
+      ...getTableColumns(members),
+      photoVersion: sql<number>`coalesce(extract(epoch from ${memberPhotos.updatedAt})::bigint, 0)`,
+    })
     .from(members)
+    .leftJoin(memberPhotos, eq(memberPhotos.memberId, members.id))
     .where(and(eq(members.householdId, row.household.id), isNull(members.leftAt)))
     .orderBy(asc(members.createdAt));
 
-  return { member: row.member, household: row.household, roommates };
+  const me = roommates.find((m) => m.id === row.member.id)
+    ?? { ...row.member, photoVersion: 0 };
+
+  return { member: me, household: row.household, roommates };
 });
 
 export async function requireSession(): Promise<Session> {

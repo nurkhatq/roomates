@@ -5,7 +5,7 @@ import type { ChoreState } from '@/lib/chores';
 import { Avatar, btnPlain, btnGhost, btnDanger } from '@/components/ui';
 import { t } from '@/lib/strings';
 
-type Mate = { id: string; name: string; index: number };
+type Mate = { id: string; name: string; index: number; photoVersion: number };
 
 export function ChoreRow({
   id, name, st, mates, meId,
@@ -27,7 +27,8 @@ export function ChoreRow({
     <div className="flex items-center gap-3 py-2.5">
       {crew.length > 0 && (
         <span className="flex shrink-0 -space-x-1.5">
-          {crew.map((m) => <Avatar key={m.id} name={m.name} index={m.index} size={26} />)}
+          {crew.map((m) => <Avatar key={m.id} name={m.name} index={m.index} size={26}
+            memberId={m.id} photoVersion={m.photoVersion} />)}
         </span>
       )}
       <button className="min-w-0 flex-1 text-left" onClick={() => setOpen((v) => !v)} aria-expanded={open}>

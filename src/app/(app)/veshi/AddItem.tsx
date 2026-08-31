@@ -6,7 +6,7 @@ import { Card, btnPrimary, btnGhost, btnPlain, inputCls, labelCls } from '@/comp
 import { t } from '@/lib/strings';
 import { unitOptions, altUnitOptions, DEFAULT_UNIT } from '@/lib/units';
 
-type Mate = { id: string; name: string; index: number };
+type Mate = { id: string; name: string; index: number; photoVersion: number };
 
 export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
   const [open, setOpen] = useState(false);
@@ -117,6 +117,14 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
           <span className={labelCls}>{t.things.interval}</span>
           <input name="interval" className={`${inputCls} num`} type="number" inputMode="numeric" min="1" defaultValue={7} />
           <span className="text-[11.5px] text-ink-3">{t.things.intervalHint}</span>
+        </label>
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-3">
+          <input type="checkbox" name="noRestock" className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px]">{t.things.noRestock}</span>
+            <span className="block text-[11.5px] text-ink-3">{t.things.noRestockHint}</span>
+          </span>
         </label>
 
         <label className="flex flex-col gap-1">

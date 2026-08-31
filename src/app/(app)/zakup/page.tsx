@@ -23,6 +23,7 @@ export default async function ZakupPage() {
   const hid = s.household.id;
   const idx = new Map(s.roommates.map((m, i) => [m.id, i]));
   const nameOf = (id: string) => s.roommates.find((m) => m.id === id)?.name ?? '—';
+  const photoOf = (id: string) => s.roommates.find((m) => m.id === id)?.photoVersion ?? 0;
 
   const bal = await householdBalances(db, hid, s.roommates.map((m) => m.id));
   const transfers = settle(bal);
@@ -38,7 +39,7 @@ export default async function ZakupPage() {
     .filter((r) => r.ownerId === null || r.ownerId === s.member.id)
     .map((r) => ({
       id: r.id, name: r.name, unit: r.unit, price: r.price ?? null, altUnit: r.altUnit ?? null, altQty: r.altQty ?? null,
-      needed: buySoon(stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now), 3),
+      needed: !r.noRestock && buySoon(stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now), 3),
     }));
   const toBuy = shelf.filter((i) => i.needed);
 
@@ -61,7 +62,7 @@ export default async function ZakupPage() {
               if (v === 0) return null;
               return (
                 <div key={m.id} className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0">
-                  <Avatar name={m.name} index={i} />
+                  <Avatar name={m.name} index={i} memberId={m.id} photoVersion={m.photoVersion} />
                   <span className="min-w-0 flex-1 truncate text-[14px]">
                     {m.name}{m.id === s.member.id ? ` (${t.common.you})` : ''}
                   </span>
@@ -127,7 +128,9 @@ export default async function ZakupPage() {
       )}
 
       <AddPurchase
-        roommates={s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i }))}
+        roommates={s.roommates.map((m, i) => ({
+          id: m.id, name: m.name, index: i, photoVersion: m.photoVersion,
+        }))}
         meId={s.member.id}
         shelf={shelf}
       />
@@ -146,7 +149,8 @@ export default async function ZakupPage() {
               return (
                 <PurchaseRow key={p.id} id={p.id}
                   shares={sh.map((x): RowShare => ({
-                    name: nameOf(x.memberId), index: idx.get(x.memberId) ?? 0,
+                    id: x.memberId, name: nameOf(x.memberId), index: idx.get(x.memberId) ?? 0,
+                    photoVersion: photoOf(x.memberId),
                     amount: x.amount, isMe: x.memberId === s.member.id,
                   }))}
                   items={inside.map((l): RowItem => ({
@@ -154,7 +158,8 @@ export default async function ZakupPage() {
                   }))}
                   receiptVersion={Number(p.receiptVersion) || 0}
                   canEdit={canDeletePurchase(p, sh.map((x) => x.memberId), s.member.id)}>
-                  <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26} />
+                  <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26}
+                    memberId={p.payerId} photoVersion={photoOf(p.payerId)} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px]">
                       {isSettlement

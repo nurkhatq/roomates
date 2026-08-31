@@ -3,7 +3,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, purchases, purchaseShares, purchaseItems, purchasePhotos, items, stockEvents } from '@/db';
-import { sharesEqual } from '@/lib/money';
+import { sharesEqual, type Share } from '@/lib/money';
 import { guard, assertOurs, assertMember } from './guard';
 import { canDeletePurchase, canConfirmSettlement } from '@/lib/rights';
 import { momentFor } from '@/lib/time';
@@ -23,6 +23,31 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
   const participants = form.getAll('participants').map(String);
   if (participants.length === 0) return { error: t.money.needParticipants };
   participants.forEach((id) => assertMember(id, s));
+
+  /*
+   * Поровну — не всегда правильно. Заказали еду, у каждого своя позиция:
+   * один взял на 1 800, другой на 4 200. Тогда доли приходят готовыми, и
+   * сумма долей обязана сойтись с общей суммой до тенге — иначе баланс
+   * квартиры уедет и уже никогда не сойдётся в ноль.
+   */
+  let custom: Share[] | null = null;
+  if (String(form.get('splitMode') ?? '') === 'custom') {
+    try {
+      const parsed: unknown = JSON.parse(String(form.get('shares') ?? '[]'));
+      if (!Array.isArray(parsed)) throw new Error('не список');
+      custom = parsed
+        .map((x) => x as { memberId?: unknown; amount?: unknown })
+        .map((x) => ({ userId: String(x.memberId ?? ''), amount: Math.round(Number(x.amount) || 0) }))
+        .filter((x) => x.userId && x.amount > 0);
+    } catch {
+      return { error: t.money.badShares };
+    }
+    custom.forEach((x) => assertMember(x.userId, s));
+    if (custom.length === 0) return { error: t.money.needParticipants };
+
+    const sum = custom.reduce((a, x) => a + x.amount, 0);
+    if (sum !== total) return { error: `${t.money.sharesMismatch} ${total - sum > 0 ? '+' : ''}${total - sum}` };
+  }
 
   const note = String(form.get('note') ?? '').trim();
   const dateRaw = String(form.get('date') ?? '');
@@ -58,7 +83,7 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
     lines = lines.filter((l) => ours.has(l.itemId));
   }
 
-  const shares = sharesEqual(total, participants);
+  const shares = custom ?? sharesEqual(total, participants);
 
   const [row] = await db.insert(purchases).values({
     householdId: s.household.id, kind: 'purchase', payerId, total, note,

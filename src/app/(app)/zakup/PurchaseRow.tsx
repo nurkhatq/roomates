@@ -8,7 +8,10 @@ import { Avatar, btnGhost, btnDanger } from '@/components/ui';
 import { t } from '@/lib/strings';
 import { useRef } from 'react';
 
-export type RowShare = { name: string; index: number; amount: number; isMe: boolean };
+export type RowShare = {
+  id: string; name: string; index: number; photoVersion: number;
+  amount: number; isMe: boolean;
+};
 export type RowItem = { name: string; qty: number; unit: string; amount: number };
 
 /**
@@ -61,8 +64,9 @@ export function PurchaseRow({
               </p>
               <div className="flex flex-col">
                 {shares.map((sh) => (
-                  <div key={sh.name} className="flex items-center gap-2 py-1">
-                    <Avatar name={sh.name} index={sh.index} size={22} />
+                  <div key={sh.id} className="flex items-center gap-2 py-1">
+                    <Avatar name={sh.name} index={sh.index} size={22}
+                      memberId={sh.id} photoVersion={sh.photoVersion} />
                     <span className="min-w-0 flex-1 truncate text-[13px]">
                       {sh.name}{sh.isMe ? t.common.youSuffix : ''}
                     </span>

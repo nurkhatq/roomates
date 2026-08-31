@@ -21,6 +21,7 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   const unit = String(form.get('unit') ?? 'шт').trim() || 'шт';
   const interval = Math.max(1, Math.round(Number(form.get('interval')) || 7));
 
+  const noRestock = form.get('noRestock') === 'on';
   const altUnit = String(form.get('altUnit') ?? '').trim() || null;
   const altRaw = String(form.get('altQty') ?? '').trim();
   const altQty = altRaw === '' ? null : Math.max(0, Number(altRaw) || 0) || null;
@@ -33,7 +34,7 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   if (ownerId) assertMember(ownerId, s);
 
   const [row] = await db.insert(items).values({
-    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price,
+    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price, noRestock,
     altUnit: altQty ? altUnit : null, altQty: altUnit ? altQty : null,
   }).returning({ id: items.id });
 
@@ -98,7 +99,8 @@ export async function recordStock(itemId: string, kind: 'purchase' | 'check', qt
 export async function updateItem(
   itemId: string,
   patch: { name?: string; unit?: string; price?: number | null;
-           altUnit?: string | null; altQty?: number | null; checkIntervalDays?: number },
+           altUnit?: string | null; altQty?: number | null;
+           noRestock?: boolean; checkIntervalDays?: number },
 ): Promise<void> {
   const s = await guard();
 
@@ -116,6 +118,7 @@ export async function updateItem(
   if (patch.price !== undefined) next.price = patch.price === null ? null : Math.max(0, Math.round(patch.price));
   if (patch.altQty !== undefined) next.altQty = patch.altQty === null ? null : Math.max(0, patch.altQty) || null;
   if (patch.altUnit !== undefined) next.altUnit = patch.altUnit?.trim() || null;
+  if (patch.noRestock !== undefined) next.noRestock = patch.noRestock;
   if (patch.checkIntervalDays !== undefined) next.checkIntervalDays = Math.max(1, Math.round(patch.checkIntervalDays));
   if (Object.keys(next).length === 0) return;
 
