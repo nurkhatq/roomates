@@ -11,6 +11,7 @@ import { AddPurchase, type ShelfItem } from './AddPurchase';
 import { SettleButton } from './SettleButton';
 import { PurchaseRow } from './PurchaseRow';
 import { t } from '@/lib/strings';
+import { fmtDay } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,6 @@ export default async function ZakupPage() {
     ? splitEqual(s.household.rentAmount, s.roommates.length)[0]
     : 0;
 
-  const dateFmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' });
 
   return (
     <>
@@ -154,7 +154,7 @@ export default async function ZakupPage() {
                         : p.note || t.money.purchaseFallback}
                     </div>
                     <div className="num truncate text-[11.5px] text-ink-3">
-                      {dateFmt.format(p.boughtAt)}
+                      {fmtDay.format(p.boughtAt)}
                       {isSettlement ? ` · ${t.money.settlement}` : ` · ${nameOf(p.payerId)}`}
                       {p.createdBy !== p.payerId && ` · ${t.money.recordedBy} ${nameOf(p.createdBy)}`}
                     </div>

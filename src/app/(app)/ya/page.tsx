@@ -6,6 +6,7 @@ import { money } from '@/lib/money';
 import { Card, Eyebrow, Empty, btnGhost } from '@/components/ui';
 import { MyProfile } from './MyProfile';
 import { t } from '@/lib/strings';
+import { fmtDayTime } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,6 @@ export default async function MePage() {
 
   const my = bal.get(s.member.id) ?? 0;
   const avatarV = versions.byMember.get(s.member.id) ?? null;
-  const fmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
     <>
@@ -113,7 +113,7 @@ export default async function MePage() {
                 <span className="num shrink-0 text-[12.5px] text-ink-2">
                   {a.kind === 'paid' ? money(a.amount) : a.kind === 'stock' ? `${a.qty} ${a.unit}` : ''}
                 </span>
-                <span className="num shrink-0 text-[11px] text-ink-3">{fmt.format(a.at)}</span>
+                <span className="num shrink-0 text-[11px] text-ink-3">{fmtDayTime.format(a.at)}</span>
               </div>
             ))}
           </div>

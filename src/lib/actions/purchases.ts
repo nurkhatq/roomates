@@ -6,6 +6,7 @@ import { db, purchases, purchaseShares, purchaseItems, items, stockEvents } from
 import { sharesEqual } from '@/lib/money';
 import { guard, assertOurs, assertMember } from './guard';
 import { canDeletePurchase, canConfirmSettlement } from '@/lib/rights';
+import { noonTZ } from '@/lib/time';
 import { t } from '@/lib/strings';
 
 export type FormState = { error?: string; ok?: boolean };
@@ -25,7 +26,9 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
 
   const note = String(form.get('note') ?? '').trim();
   const dateRaw = String(form.get('date') ?? '');
-  const boughtAt = dateRaw ? new Date(`${dateRaw}T12:00:00`) : new Date();
+  // Дата без времени — это полдень по Астане, а не по серверу: иначе
+  // вечерний закуп записывался бы вчерашним днём.
+  const boughtAt = dateRaw ? noonTZ(dateRaw) : new Date();
 
   // Что именно взяли с полки. Пустой список — обычный закуп без разбора.
   let lines: { itemId: string; qty: number; amount: number }[] = [];

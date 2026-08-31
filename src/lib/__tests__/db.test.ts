@@ -11,7 +11,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import * as schema from '../../db/schema';
 import { households, members, purchases, purchaseShares, items, stockEvents, chores, choreEvents } from '../../db/schema';
-import { householdBalances, recentPurchases, itemsWithEvents, choresWithHistory, type AnyDb } from '../queries';
+import { householdBalances, recentPurchases, itemsWithEvents, choresWithHistory, myActivity, type AnyDb } from '../queries';
 import { balances, sharesEqual, settle, type Purchase } from '../money';
 import { stockState } from '../stock';
 import { choreState } from '../chores';
@@ -235,4 +235,38 @@ test('квартиры не видят данные друг друга', async 
 
   const { rows } = await itemsWithEvents(db, a.house.id, 12);
   assert.equal(rows.length, 0, 'чужие вещи просочились');
+});
+
+test('лента действий идёт от свежего к старому', async () => {
+  const db = await freshDb();
+  const { house, mates } = await seedHouse(db);
+  const me = mates[0].id;
+  const now = Date.now();
+  const at = (hoursAgo: number) => new Date(now - hoursAgo * 3600_000);
+
+  const [p] = await db.insert(purchases).values({
+    householdId: house.id, payerId: me, total: 5000, note: 'старый закуп',
+    boughtAt: at(72), createdBy: me,
+  }).returning({ id: purchases.id });
+  await db.insert(purchaseShares).values({ purchaseId: p.id, memberId: me, amount: 5000 });
+
+  const [it] = await db.insert(items).values({ householdId: house.id, name: 'Бумага' }).returning();
+  await db.insert(stockEvents).values([
+    { itemId: it.id, kind: 'check', qty: 10, at: at(48), memberId: me },
+    { itemId: it.id, kind: 'purchase', qty: 5, at: at(2), memberId: me },
+  ]);
+
+  const [ch] = await db.insert(chores).values({
+    householdId: house.id, name: 'Мусор', order: [me],
+  }).returning();
+  await db.insert(choreEvents).values({ choreId: ch.id, memberId: me, doneAt: at(24) });
+
+  const feed = await myActivity(db, house.id, me, 20);
+  assert.equal(feed.length, 4);
+  for (let i = 1; i < feed.length; i++) {
+    assert.ok(feed[i - 1].at.getTime() >= feed[i].at.getTime(),
+      `лента сбилась: ${feed[i - 1].at.toISOString()} стоит выше ${feed[i].at.toISOString()}`);
+  }
+  assert.equal(feed[0].kind, 'stock', 'сверху должно быть самое свежее — докупка два часа назад');
+  assert.equal(feed[feed.length - 1].label, 'старый закуп');
 });

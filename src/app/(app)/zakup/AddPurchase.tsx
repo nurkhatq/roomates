@@ -4,6 +4,7 @@ import { addPurchase, type FormState } from '@/lib/actions/purchases';
 import { splitEqual, money } from '@/lib/money';
 import { Avatar, Card, btnPrimary, btnGhost, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
+import { todayISO } from '@/lib/time';
 
 type Mate = { id: string; name: string; index: number };
 export type ShelfItem = {
@@ -13,7 +14,7 @@ export type ShelfItem = {
 /** qty хранится в той мере, что выбрана в строке; в базовые единицы переводим при отправке. */
 type Line = { qty: string; amount: string; alt: boolean };
 
-const today = () => new Date().toISOString().slice(0, 10);
+
 
 const BLANK_LINE: Line = { qty: '', amount: '', alt: false };
 
@@ -209,7 +210,7 @@ export function AddPurchase({
 
         <label className="flex flex-col gap-1">
           <span className={labelCls}>{t.money.date}</span>
-          <input name="date" type="date" defaultValue={today()} className={`${inputCls} num`} />
+          <input name="date" type="date" defaultValue={todayISO()} className={`${inputCls} num`} />
         </label>
 
         {state.error && <p className="text-[13px] text-attn">{state.error}</p>}

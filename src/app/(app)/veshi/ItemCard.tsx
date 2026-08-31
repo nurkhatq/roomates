@@ -8,6 +8,7 @@ import { money } from '@/lib/money';
 import type { StockState } from '@/lib/stock';
 import { btnPlain, btnGhost, btnPrimary, btnDanger, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
+import { fmtDay } from '@/lib/time';
 
 export type CardItem = {
   id: string; name: string; unit: string; ownerId: string | null;
@@ -17,7 +18,7 @@ export type CardItem = {
 };
 type Mate = { id: string; name: string; index: number };
 
-const dayFmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' });
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function ItemCard({
@@ -141,7 +142,7 @@ export function ItemCard({
                   {st.ratePerDay
                     ? ` · ${round1(st.ratePerDay)} ${item.unit} ${t.things.perDay}`
                     : st.current !== null ? ` · ${t.things.unknownRate}` : ''}
-                  {st.nextCheckOn ? ` · ${t.things.nextCheck} ${dayFmt.format(st.nextCheckOn)}` : ''}
+                  {st.nextCheckOn ? ` · ${t.things.nextCheck} ${fmtDay.format(st.nextCheckOn)}` : ''}
                 </p>
               </div>
             </div>

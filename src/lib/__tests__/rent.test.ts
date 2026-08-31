@@ -31,3 +31,15 @@ test('день не задан — напоминать не о чем', () => {
   assert.equal(nextRentDate(0), null);
   assert.equal(nextRentDate(45), null);
 });
+
+test('поздним вечером по Астане счёт идёт уже от следующего дня', () => {
+  // 20:30 UTC 4 сентября = 01:30 пятого сентября в Астане, платёж пятого
+  const late = new Date('2026-09-04T20:30:00Z');
+  const r = nextRentDate(5, late)!;
+  assert.equal(r.daysLeft, 0, 'по Астане это уже день платежа');
+});
+
+test('до платежа считается по календарю, а не по часам', () => {
+  const r = nextRentDate(5, new Date('2026-09-01T19:00:00Z'))!; // 2 сентября 00:00 в Астане
+  assert.equal(r.daysLeft, 3);
+});
