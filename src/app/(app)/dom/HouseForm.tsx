@@ -3,7 +3,7 @@ import { useActionState, useState, useTransition } from 'react';
 import { updateHousehold, setHouseholdPhoto, recordRent, type FormState } from '@/lib/actions/household';
 import { splitEqual, money } from '@/lib/money';
 import { PhotoPicker } from '@/components/PhotoPicker';
-import { Card, Eyebrow, btnPrimary, btnGhost, inputCls, labelCls } from '@/components/ui';
+import { Card, Eyebrow, btnPrimary, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
 
 type House = {
@@ -26,8 +26,41 @@ export function HouseForm({
 
   const share = house.rentAmount > 0 && people > 0 ? splitEqual(house.rentAmount, people)[0] : 0;
 
+  const details = [
+    house.entrance && `${t.house.entrance} ${house.entrance}`,
+    house.apartment && `${t.house.apartment} ${house.apartment}`,
+    house.floor && `${t.house.floor} ${house.floor}`,
+  ].filter(Boolean).join(' · ');
+
   return (
     <>
+      {(house.address || house.mapUrl) && (
+        <Card>
+          <Eyebrow>{t.house.address}</Eyebrow>
+          {/* Вся карточка адреса — ссылка: её открывают на бегу, попадать
+              пальцем в мелкую строчку неудобно. noopener обязателен, иначе
+              открытая вкладка получает доступ к window.opener этой страницы. */}
+          {house.mapUrl ? (
+            <a href={house.mapUrl} target="_blank" rel="noopener noreferrer"
+              className="-m-1 flex items-center gap-3 rounded-lg p-1">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px]">{house.address || t.house.mapOpen}</span>
+                {details && <span className="num block text-[12.5px] text-ink-3">{details}</span>}
+              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" className="shrink-0 text-ink-3" aria-hidden="true">
+                <path d="M7 17 17 7M9 7h8v8" />
+              </svg>
+            </a>
+          ) : (
+            <div>
+              <p className="text-[15px]">{house.address}</p>
+              {details && <p className="num text-[12.5px] text-ink-3">{details}</p>}
+            </div>
+          )}
+        </Card>
+      )}
+
       <Card>
         <Eyebrow>{t.house.photo}</Eyebrow>
         <PhotoPicker
@@ -106,23 +139,6 @@ export function HouseForm({
           </button>
         </form>
       </Card>
-
-      {house.mapUrl && (
-        <Card>
-          <Eyebrow>{t.house.address}</Eyebrow>
-          <p className="mb-1 text-[14px]">{house.address || '—'}</p>
-          <p className="num mb-3 text-[12.5px] text-ink-3">
-            {[house.entrance && `${t.house.entrance} ${house.entrance}`,
-              house.apartment && `${t.house.apartment} ${house.apartment}`,
-              house.floor && `${t.house.floor} ${house.floor}`].filter(Boolean).join(' · ')}
-          </p>
-          {/* Внешняя ссылка: noopener обязателен, иначе открытая вкладка получает
-              доступ к window.opener этой страницы. */}
-          <a href={house.mapUrl} target="_blank" rel="noopener noreferrer" className={btnGhost}>
-            {t.house.mapOpen}
-          </a>
-        </Card>
-      )}
 
       {house.rentAmount > 0 && (
         <Card>

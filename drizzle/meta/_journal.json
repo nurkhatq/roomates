@@ -15,6 +15,13 @@
       "when": 1788140129651,
       "tag": "0001_chilly_pepper_potts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788141294460,
+      "tag": "0002_peaceful_the_spike",
+      "breakpoints": true
     }
   ]
 }

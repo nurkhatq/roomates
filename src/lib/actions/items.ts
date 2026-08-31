@@ -19,6 +19,9 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   const unit = String(form.get('unit') ?? 'шт').trim() || 'шт';
   const interval = Math.max(1, Math.round(Number(form.get('interval')) || 7));
 
+  const packRaw = String(form.get('packQty') ?? '').trim();
+  const packQty = packRaw === '' ? null : Math.max(0, Number(packRaw) || 0) || null;
+
   const priceRaw = String(form.get('price') ?? '').trim();
   const price = priceRaw === '' ? null : Math.max(0, Math.round(Number(priceRaw) || 0));
 
@@ -27,7 +30,7 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   if (ownerId) assertMember(ownerId, s);
 
   const [row] = await db.insert(items).values({
-    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price,
+    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price, packQty,
   }).returning({ id: items.id });
 
   const photo = String(form.get('photo') ?? '');
@@ -40,10 +43,12 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
     }
   }
 
+  // Тот, кто завёл вещь, её не покупал — он просто пересчитал, что уже стоит
+  // дома. Записывать это покупкой значит врать и в ленте действий, и в расходе.
   const qty = Number(form.get('qty'));
-  if (Number.isFinite(qty) && qty > 0) {
+  if (Number.isFinite(qty) && qty >= 0) {
     await db.insert(stockEvents).values({
-      itemId: row.id, kind: 'purchase', qty, memberId: s.member.id,
+      itemId: row.id, kind: 'check', qty, memberId: s.member.id,
     });
   }
 
@@ -88,7 +93,8 @@ export async function recordStock(itemId: string, kind: 'purchase' | 'check', qt
 /** Правка карточки вещи: название, единица, цена, срок пересчёта. */
 export async function updateItem(
   itemId: string,
-  patch: { name?: string; unit?: string; price?: number | null; checkIntervalDays?: number },
+  patch: { name?: string; unit?: string; price?: number | null;
+           packQty?: number | null; checkIntervalDays?: number },
 ): Promise<void> {
   const s = await guard();
 
@@ -101,6 +107,7 @@ export async function updateItem(
   if (patch.name !== undefined && patch.name.trim()) next.name = patch.name.trim();
   if (patch.unit !== undefined && patch.unit.trim()) next.unit = patch.unit.trim();
   if (patch.price !== undefined) next.price = patch.price === null ? null : Math.max(0, Math.round(patch.price));
+  if (patch.packQty !== undefined) next.packQty = patch.packQty === null ? null : Math.max(0, patch.packQty) || null;
   if (patch.checkIntervalDays !== undefined) next.checkIntervalDays = Math.max(1, Math.round(patch.checkIntervalDays));
   if (Object.keys(next).length === 0) return;
 

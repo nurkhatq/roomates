@@ -6,7 +6,10 @@ import { Avatar, Card, btnPrimary, btnGhost, inputCls, labelCls } from '@/compon
 import { t } from '@/lib/strings';
 
 type Mate = { id: string; name: string; index: number };
-export type ShelfItem = { id: string; name: string; unit: string; price: number | null; needed: boolean };
+export type ShelfItem = {
+  id: string; name: string; unit: string;
+  price: number | null; packQty: number | null; needed: boolean;
+};
 type Line = { qty: string; amount: string };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -116,6 +119,17 @@ export function AddPurchase({
                       </span>
                       {on && (
                         <>
+                          {/* В магазине берут упаковками, а считаем мы единицами.
+                              Кнопка добавляет упаковку, чтобы не умножать в уме. */}
+                          {i.packQty ? (
+                            <button type="button"
+                              onClick={() => setLine(i.id, {
+                                qty: String((Number(lines[i.id].qty) || 0) + (i.packQty ?? 0)),
+                              })}
+                              className="h-11 shrink-0 rounded-lg border border-line px-2 text-[11px] text-ink-2">
+                              +{i.packQty} {t.things.addPack}
+                            </button>
+                          ) : null}
                           <input value={lines[i.id].qty} onChange={(e) => setLine(i.id, { qty: e.target.value })}
                             type="number" inputMode="decimal" min="0" step="0.5"
                             className={`${inputCls} num w-16 px-2 text-right`} aria-label={`${i.name}: сколько`} />

@@ -117,10 +117,30 @@ test('полным запасом считается самая большая �
   assert.equal(s.level, 0.5);
 });
 
-test('без закупок уровень неизвестен — полоску рисовать не из чего', () => {
-  const s = stockState([{ kind: 'check', qty: 5, at: ago(1) }], 7, NOW);
+test('вещь просто завели и описали — полка считается полной', () => {
+  // Тот, кто добавил вещь, её не покупал. Но 10 рулонов на полке — это и есть
+  // полная полка, иначе у такой вещи вообще не было бы уровня.
+  const s = stockState([{ kind: 'check', qty: 10, at: ago(1) }], 7, NOW);
+  assert.equal(s.capacity, 10);
+  assert.equal(s.level, 1);
+});
+
+test('совсем без событий уровня нет', () => {
+  const s = stockState([], 7, NOW);
   assert.equal(s.capacity, null);
   assert.equal(s.level, null);
+});
+
+test('полной считается самая полная полка, какую видели', () => {
+  // Описали 3, потом докупили 12 — на полке побывало 15, это и есть потолок.
+  const s = stockState([
+    { kind: 'check', qty: 3, at: ago(10) },
+    { kind: 'purchase', qty: 12, at: ago(9) },
+    { kind: 'check', qty: 15, at: ago(9) },
+    { kind: 'check', qty: 4, at: ago(1) },
+  ], 7, NOW);
+  assert.equal(s.capacity, 15);
+  assert.ok(s.level !== null && Math.abs(s.level - 4 / 15) < 0.001);
 });
 
 test('пустая вещь попадает в закуп даже без известного расхода', () => {

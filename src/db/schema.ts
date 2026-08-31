@@ -89,6 +89,12 @@ export const items = pgTable('items', {
   checkIntervalDays: integer('check_interval_days').notNull().default(7),
   /** Последняя известная цена за единицу. Обновляется при закупе. */
   price: integer('price'),
+  /**
+   * Сколько единиц в одной упаковке. Считаем всегда в единицах — рулонах,
+   * литрах, штуках, — потому что кончаются именно они. Упаковка нужна лишь
+   * затем, чтобы в магазине не умножать в уме: «взял 1 упаковку» = +10 рулонов.
+   */
+  packQty: doublePrecision('pack_qty'),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('items_household_idx').on(t.householdId)]);

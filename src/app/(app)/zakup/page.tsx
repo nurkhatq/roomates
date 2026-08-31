@@ -25,7 +25,7 @@ export default async function ZakupPage() {
   const transfers = settle(bal);
   const allSquare = transfers.length === 0;
 
-  const { rows: recent, sharesBy } = await recentPurchases(db, hid, HISTORY_LIMIT);
+  const { rows: recent, sharesBy, itemsBy } = await recentPurchases(db, hid, HISTORY_LIMIT);
 
   // Полка нужна прямо здесь: закуп должен предлагать то, что кончается,
   // а не заставлять вспоминать это по дороге в магазин.
@@ -34,7 +34,7 @@ export default async function ZakupPage() {
   const shelf: ShelfItem[] = itemRows
     .filter((r) => r.ownerId === null || r.ownerId === s.member.id)
     .map((r) => ({
-      id: r.id, name: r.name, unit: r.unit, price: r.price ?? null,
+      id: r.id, name: r.name, unit: r.unit, price: r.price ?? null, packQty: r.packQty ?? null,
       needed: buySoon(stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now), 3),
     }));
   const toBuy = shelf.filter((i) => i.needed);
@@ -87,7 +87,8 @@ export default async function ZakupPage() {
                   {nameOf(tr.from)} → {nameOf(tr.to)}
                 </span>
                 <span className="num text-[14px] font-medium">{money(tr.amount)}</span>
-                <SettleButton from={tr.from} to={tr.to} amount={tr.amount} />
+                <SettleButton from={tr.from} to={tr.to} amount={tr.amount}
+                  canConfirm={tr.to === s.member.id} />
               </div>
             ))}
           </div>
@@ -138,8 +139,11 @@ export default async function ZakupPage() {
             {recent.map((p) => {
               const sh = sharesBy.get(p.id) ?? [];
               const isSettlement = p.kind === 'settlement';
+              const myShare = sh.find((x) => x.memberId === s.member.id)?.amount ?? 0;
+              const inside = itemsBy.get(p.id) ?? [];
               return (
-                <PurchaseRow key={p.id} id={p.id}>
+                <PurchaseRow key={p.id} id={p.id}
+                  inside={inside.map((l) => `${l.name} · ${l.qty} ${l.unit}`)}>
                   <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px]">
@@ -149,12 +153,17 @@ export default async function ZakupPage() {
                     </div>
                     <div className="num truncate text-[11.5px] text-ink-3">
                       {dateFmt.format(p.boughtAt)}
-                      {isSettlement
-                        ? ` · ${t.money.settlement}`
-                        : ` · ${nameOf(p.payerId)} · ${t.money.perPerson} ${money(sh[0]?.amount ?? 0)}`}
+                      {isSettlement ? ` · ${t.money.settlement}` : ` · ${nameOf(p.payerId)}`}
                     </div>
                   </div>
-                  <span className="num shrink-0 text-[14px] font-medium">{money(p.total)}</span>
+                  <span className="shrink-0 text-right">
+                    <span className="num block text-[14px] font-medium">{money(p.total)}</span>
+                    {myShare > 0 && !isSettlement && (
+                      <span className="num block text-[11px] text-ink-3">
+                        {t.money.yourShare} {money(myShare)}
+                      </span>
+                    )}
+                  </span>
                 </PurchaseRow>
               );
             })}

@@ -1,7 +1,7 @@
 import { sql, eq, and, isNull, asc, desc, lte, inArray, getTableColumns } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import * as schema from '@/db/schema';
-import { purchases, purchaseShares, items, itemPhotos, stockEvents, chores, choreEvents,
+import { purchases, purchaseShares, purchaseItems, items, itemPhotos, stockEvents, chores, choreEvents,
   householdPhotos, memberPhotos } from '@/db/schema';
 
 /**
@@ -46,7 +46,25 @@ export async function recentPurchases(db: AnyDb, householdId: string, limit: num
     arr.push(sh);
     by.set(sh.purchaseId, arr);
   }
-  return { rows, sharesBy: by };
+
+  // Что именно лежало в пакете — чтобы человек видел, за что с него списали.
+  const lines = rows.length
+    ? await db.select({
+        purchaseId: purchaseItems.purchaseId, qty: purchaseItems.qty,
+        amount: purchaseItems.amount, name: items.name, unit: items.unit,
+      })
+        .from(purchaseItems)
+        .innerJoin(items, eq(items.id, purchaseItems.itemId))
+        .where(inArray(purchaseItems.purchaseId, rows.map((r) => r.id)))
+    : [];
+  const itemsBy = new Map<string, typeof lines>();
+  for (const l of lines) {
+    const arr = itemsBy.get(l.purchaseId) ?? [];
+    arr.push(l);
+    itemsBy.set(l.purchaseId, arr);
+  }
+
+  return { rows, sharesBy: by, itemsBy };
 }
 
 /**

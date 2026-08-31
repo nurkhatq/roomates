@@ -59,7 +59,7 @@ export function PhotoPicker({
         </button>
         {note && <span className="text-[11.5px] text-ink-3">{note}</span>}
       </div>
-      <input ref={ref} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
+      <input ref={ref} type="file" accept="image/*" onChange={onFile} className="hidden" />
     </div>
   );
 }

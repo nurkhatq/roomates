@@ -11,7 +11,7 @@ import { t } from '@/lib/strings';
 
 export type CardItem = {
   id: string; name: string; unit: string; ownerId: string | null;
-  checkIntervalDays: number; price: number | null;
+  checkIntervalDays: number; price: number | null; packQty: number | null;
   hasPhoto: boolean; photoVersion: number;
 };
 type Mate = { id: string; name: string; index: number };
@@ -51,6 +51,7 @@ export function ItemCard({
         name: String(form.get('name') ?? ''),
         unit: String(form.get('unit') ?? ''),
         price: String(form.get('price') ?? '').trim() === '' ? null : Number(form.get('price')),
+        packQty: String(form.get('packQty') ?? '').trim() === '' ? null : Number(form.get('packQty')),
         checkIntervalDays: Number(form.get('interval')),
       });
       setEditing(false);
@@ -158,6 +159,11 @@ export function ItemCard({
                   </label>
                 </div>
                 <label className="flex flex-col gap-1">
+                  <span className={labelCls}>{t.things.pack}</span>
+                  <input name="packQty" type="number" inputMode="decimal" min="0" step="0.5"
+                    className={`${inputCls} num`} defaultValue={item.packQty ?? ''} placeholder="—" />
+                </label>
+                <label className="flex flex-col gap-1">
                   <span className={labelCls}>{t.things.interval}</span>
                   <input name="interval" type="number" inputMode="numeric" min="1"
                     className={`${inputCls} num`} defaultValue={item.checkIntervalDays} />
@@ -202,7 +208,7 @@ export function ItemCard({
                     </button>
                   </div>
                   {note && <span className="text-[11.5px] text-ink-3">{note}</span>}
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment"
+                  <input ref={fileRef} type="file" accept="image/*"
                     onChange={onFile} className="hidden" />
                   <div className="flex gap-2">
                     <button className={`${btnGhost} flex-1`} onClick={() => setOpen(false)}>{t.common.cancel}</button>

@@ -15,9 +15,20 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
   const [photoNote, setPhotoNote] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [added, setAdded] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Опись заводят пачкой: восемь вещей — это восемь раз открыть форму заново.
+  // Поэтому после сохранения форма остаётся открытой и чистой, а закрывает её
+  // кнопка «Готово».
   const [state, action, pending] = useActionState(async (prev: FormState, fd: FormData) => {
     const res = await addItem(prev, fd);
-    if (res.ok) { setOpen(false); setPhoto(''); setPhotoNote(''); }
+    if (res.ok) {
+      setPhoto(''); setPhotoNote('');
+      setAdded((n) => n + 1);
+      formRef.current?.reset();
+      formRef.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+    }
     return res;
   }, {} as FormState);
 
@@ -43,7 +54,7 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
 
   return (
     <Card>
-      <form action={action} className="flex flex-col gap-3.5">
+      <form ref={formRef} action={action} className="flex flex-col gap-3.5">
         <input type="hidden" name="photo" value={photo} />
 
         <div className="flex items-center gap-3">
@@ -62,7 +73,7 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
             </button>
             {photoNote && <span className="text-[11.5px] text-ink-3">{photoNote}</span>}
           </div>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
+          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
         </div>
 
         <label className="flex flex-col gap-1">
@@ -82,6 +93,13 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
             <input name="qty" className={`${inputCls} num`} type="number" inputMode="decimal" min="0" step="0.5" placeholder="12" />
           </label>
         </div>
+
+        <label className="flex flex-col gap-1">
+          <span className={labelCls}>{t.things.pack}</span>
+          <input name="packQty" className={`${inputCls} num`} type="number" inputMode="decimal"
+            min="0" step="0.5" placeholder="10" />
+          <span className="text-[11.5px] text-ink-3">{t.things.packHint}</span>
+        </label>
 
         <label className="flex flex-col gap-1">
           <span className={labelCls}>{t.things.price}</span>
@@ -107,11 +125,17 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
 
         {state.error && <p className="text-[13px] text-attn">{state.error}</p>}
 
+        {added > 0 && (
+          <p className="text-[12px] text-ink-3">{t.things.addedCount} {added}</p>
+        )}
+
         <div className="flex gap-2">
           <button className={`${btnPrimary} flex-1`} disabled={pending || working}>
-            {pending ? t.common.loading : t.common.save}
+            {pending ? t.common.loading : added > 0 ? t.things.saveNext : t.common.save}
           </button>
-          <button type="button" className={btnGhost} onClick={() => setOpen(false)}>{t.common.cancel}</button>
+          <button type="button" className={btnGhost} onClick={() => { setOpen(false); setAdded(0); }}>
+            {added > 0 ? t.things.doneAdding : t.common.cancel}
+          </button>
         </div>
       </form>
     </Card>

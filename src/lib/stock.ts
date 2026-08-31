@@ -100,12 +100,11 @@ export function stockState(
   const confidence: StockState['confidence'] =
     samples.length === 0 ? 'none' : samples.length === 1 ? 'rough' : 'good';
 
-  // Полным запасом считаем самую большую разовую закупку: сколько берут за раз,
-  // столько и есть «полка забита». Первый закуп задаёт эту величину сам.
-  const purchases = sorted.filter(
-    (e): e is Extract<StockEvent, { kind: 'purchase' }> => e.kind === 'purchase',
-  );
-  const capacity = purchases.length ? Math.max(...purchases.map((e) => e.qty)) : null;
+  // Полным запасом считаем самое большое количество, которое мы вообще у этой
+  // вещи видели: разовую закупку или пересчёт. Только по закупкам считать нельзя —
+  // тогда у вещи, которую просто завели и описали, полки бы не было вовсе.
+  const seen = sorted.map((e) => e.qty).filter((q) => q > 0);
+  const capacity = seen.length ? Math.max(...seen) : null;
   const level = capacity && capacity > 0 ? Math.max(0, Math.min(1, current / capacity)) : null;
 
   const daysLeft = ratePerDay && ratePerDay > 0 ? current / ratePerDay : null;
