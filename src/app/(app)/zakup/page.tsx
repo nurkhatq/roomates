@@ -5,6 +5,7 @@ import { settle, money } from '@/lib/money';
 import { Avatar, Card, Eyebrow, Empty, Dot } from '@/components/ui';
 import { AddPurchase } from './AddPurchase';
 import { SettleButton } from './SettleButton';
+import { PurchaseRow } from './PurchaseRow';
 import { t } from '@/lib/strings';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +87,7 @@ export default async function ZakupPage() {
               const sh = sharesBy.get(p.id) ?? [];
               const isSettlement = p.kind === 'settlement';
               return (
-                <div key={p.id} className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0">
+                <PurchaseRow key={p.id} id={p.id}>
                   <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px]">
@@ -102,7 +103,7 @@ export default async function ZakupPage() {
                     </div>
                   </div>
                   <span className="num shrink-0 text-[14px] font-medium">{money(p.total)}</span>
-                </div>
+                </PurchaseRow>
               );
             })}
           </div>
