@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { t } from '@/lib/strings';
 
@@ -15,24 +14,17 @@ const TABS = [
     icon: <><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></> },
 ];
 
+/*
+ * Панель намеренно НЕ прячется на время набора текста.
+ *
+ * Такая попытка была и обернулась пропажей нажатий: пока человек печатает,
+ * панель скрыта, а в момент нажатия на кнопку внизу формы фокус уходит из
+ * поля, панель возвращается ровно под палец и забирает нажатие себе. Кнопка
+ * «Записать» переставала работать. Зум на айфоне лечится размером шрифта у
+ * полей (16px в globals.css), а не прятками.
+ */
 export function BottomNav() {
   const path = usePathname();
-
-  // Клавиатура на телефоне выталкивает fixed-элементы, и панель разделов
-  // начинает прыгать поверх поля ввода. Проще убрать её на время набора.
-  useEffect(() => {
-    const isField = (el: EventTarget | null) =>
-      el instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
-    const on = (e: FocusEvent) => { if (isField(e.target)) document.body.dataset.typing = '1'; };
-    const off = () => { delete document.body.dataset.typing; };
-    document.addEventListener('focusin', on);
-    document.addEventListener('focusout', off);
-    return () => {
-      document.removeEventListener('focusin', on);
-      document.removeEventListener('focusout', off);
-      off();
-    };
-  }, []);
   return (
     <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-card pb-[env(safe-area-inset-bottom,0px)]"
       aria-label={t.nav.label}>

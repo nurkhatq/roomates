@@ -80,9 +80,6 @@ html { -webkit-text-size-adjust: 100%; }
 */
 input, select, textarea { font-size: 16px; }
 
-/* Пока открыта клавиатура, нижняя панель только мешает: она перекрывает поле
-   и на айфоне всё равно ведёт себя непредсказуемо. */
-body[data-typing='1'] .bottom-nav { display: none; }
 
 body {
   background: var(--paper);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { todayISO, partsTZ, noonTZ, daysBetween, fmtDayTime } from '../time';
+import { todayISO, partsTZ, noonTZ, daysBetween, fmtDayTime, momentFor } from '../time';
 
 /* Тесты гоняются в поясе машины разработчика, но сервер живёт в UTC.
    Здесь важно, что результат не зависит от пояса процесса. */
@@ -34,4 +34,20 @@ test('разница в сутках считается по календарю 
   const b = new Date('2026-09-01T20:30:00Z'); // 2 сентября в Астане
   assert.equal(daysBetween(a, b), 1);
   assert.equal(daysBetween(a, a), 0);
+});
+
+test('закуп за сегодня получает настоящее время, а не полдень', () => {
+  const now = new Date('2026-08-31T02:24:00Z'); // 07:24 в Астане
+  assert.equal(momentFor('2026-08-31', now).toISOString(), now.toISOString());
+});
+
+test('закуп задним числом получает полдень того дня', () => {
+  const now = new Date('2026-08-31T02:24:00Z');
+  assert.equal(momentFor('2026-08-29', now).toISOString(), '2026-08-29T07:00:00.000Z');
+});
+
+test('поздним вечером «сегодня» — это уже завтрашняя дата', () => {
+  const late = new Date('2026-08-31T20:30:00Z'); // 01:30 первого сентября в Астане
+  assert.equal(momentFor('2026-09-01', late).toISOString(), late.toISOString(),
+    'выбранное «сегодня» должно совпасть с календарём Астаны');
 });

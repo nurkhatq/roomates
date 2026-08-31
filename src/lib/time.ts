@@ -51,6 +51,15 @@ export function noonTZ(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00${OFFSET}`);
 }
 
+/**
+ * Момент записи по выбранной дате. Сегодняшняя дата получает настоящее время —
+ * иначе закуп, сделанный в семь утра, лежал бы в ленте полднем и путал порядок.
+ * Прошедшая дата времени не имеет, поэтому ей достаётся полдень.
+ */
+export function momentFor(isoDate: string, now: Date = new Date()): Date {
+  return isoDate === todayISO(now) ? now : noonTZ(isoDate);
+}
+
 /** Сколько целых суток прошло между двумя календарными днями в Астане. */
 export function daysBetween(a: Date, b: Date): number {
   const toNum = (d: Date) => { const p = partsTZ(d); return Date.UTC(p.year, p.month - 1, p.day); };
