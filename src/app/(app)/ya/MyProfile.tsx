@@ -26,6 +26,7 @@ export function MyProfile({
         label={t.me.setPhoto}
         size={72}
         round
+        mode="square"
         onPick={setMyPhoto}
       />
 

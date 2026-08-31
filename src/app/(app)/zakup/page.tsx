@@ -8,6 +8,7 @@ import { splitEqual } from '@/lib/money';
 import { settle, money } from '@/lib/money';
 import { Avatar, Card, Eyebrow, Empty, Dot } from '@/components/ui';
 import { AddPurchase, type ShelfItem } from './AddPurchase';
+import type { RowShare, RowItem } from './PurchaseRow';
 import { SettleButton } from './SettleButton';
 import { PurchaseRow } from './PurchaseRow';
 import { t } from '@/lib/strings';
@@ -144,8 +145,15 @@ export default async function ZakupPage() {
               const inside = itemsBy.get(p.id) ?? [];
               return (
                 <PurchaseRow key={p.id} id={p.id}
-                  inside={inside.map((l) => `${l.name} · ${l.qty} ${l.unit}`)}
-                  canDelete={canDeletePurchase(p, sh.map((x) => x.memberId), s.member.id)}>
+                  shares={sh.map((x): RowShare => ({
+                    name: nameOf(x.memberId), index: idx.get(x.memberId) ?? 0,
+                    amount: x.amount, isMe: x.memberId === s.member.id,
+                  }))}
+                  items={inside.map((l): RowItem => ({
+                    name: l.name, qty: Number(l.qty), unit: l.unit, amount: l.amount,
+                  }))}
+                  receiptVersion={Number(p.receiptVersion) || 0}
+                  canEdit={canDeletePurchase(p, sh.map((x) => x.memberId), s.member.id)}>
                   <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px]">

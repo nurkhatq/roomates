@@ -38,7 +38,7 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
     setWorking(true);
     setPhotoNote(t.things.removingBg);
     try {
-      const res = await prepPhoto(file, true);
+      const res = await prepPhoto(file, 'cutout');
       setPhoto(res.dataUrl);
       setPhotoNote(res.bgRemoved ? '' : t.things.bgFailed);
     } catch {

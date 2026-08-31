@@ -171,6 +171,18 @@ export const householdPhotos = pgTable('household_photos', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Чек к закупу. Одна фотография на запись: если через месяц возникнет спор
+ * «а за что мы отдали восемнадцать тысяч», бумажка отвечает на это лучше
+ * любого списка. Размер больше, чем у остальных фото, — цифры должны читаться.
+ */
+export const purchasePhotos = pgTable('purchase_photos', {
+  purchaseId: uuid('purchase_id').primaryKey().references(() => purchases.id, { onDelete: 'cascade' }),
+  data: text('data').notNull(),
+  mime: text('mime').notNull().default('image/jpeg'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /* --------------------------- что именно купили в закуп -------------------------- */
 
 /**

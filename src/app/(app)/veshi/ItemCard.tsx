@@ -71,7 +71,7 @@ export function ItemCard({
     if (!file) return;
     setWorking(true); setNote(t.things.removingBg);
     try {
-      const res = await prepPhoto(file, true);
+      const res = await prepPhoto(file, 'cutout');
       await setItemPhoto(item.id, res.dataUrl);
       setNote(res.bgRemoved ? '' : t.things.bgFailed);
     } catch {

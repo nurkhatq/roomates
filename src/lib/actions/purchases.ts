@@ -2,7 +2,7 @@
 
 import { eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { db, purchases, purchaseShares, purchaseItems, items, stockEvents } from '@/db';
+import { db, purchases, purchaseShares, purchaseItems, purchasePhotos, items, stockEvents } from '@/db';
 import { sharesEqual } from '@/lib/money';
 import { guard, assertOurs, assertMember } from './guard';
 import { canDeletePurchase, canConfirmSettlement } from '@/lib/rights';
@@ -130,6 +130,39 @@ export async function recordSettlement(fromId: string, toId: string, amount: num
  * уметь исправить. Перевод — только две его стороны: иначе посторонний жилец
  * отменяет чужое подтверждение оплаты, и долг воскресает.
  */
+/** Потолок на случай, если сжатие на телефоне не сработало. */
+const MAX_PHOTO_BYTES = 900_000;
+
+/**
+ * Чек прикрепляет тот, кого запись касается — по тому же правилу, что и
+ * удаление: посторонний не должен подменять чужую бумажку.
+ */
+export async function setPurchasePhoto(id: string, dataUrl: string): Promise<string | void> {
+  const s = await guard();
+
+  const [row] = await db.select({
+    householdId: purchases.householdId, kind: purchases.kind,
+    payerId: purchases.payerId, createdBy: purchases.createdBy,
+  }).from(purchases).where(eq(purchases.id, id)).limit(1);
+  if (!row) return;
+  assertOurs(row.householdId, s);
+  if (!canDeletePurchase(row, [], s.member.id)) {
+    throw new Error('Прикрепить чек может только тот, кого запись касается');
+  }
+
+  if (!dataUrl.startsWith('data:image/')) return 'Это не похоже на картинку';
+  const comma = dataUrl.indexOf(',');
+  const data = dataUrl.slice(comma + 1);
+  const mime = dataUrl.slice(5, dataUrl.indexOf(';'));
+  if (data.length > MAX_PHOTO_BYTES) return 'Чек слишком тяжёлый — сними ещё раз';
+
+  await db.insert(purchasePhotos)
+    .values({ purchaseId: id, data, mime, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: purchasePhotos.purchaseId, set: { data, mime, updatedAt: new Date() } });
+
+  revalidatePath('/zakup');
+}
+
 export async function deletePurchase(id: string): Promise<void> {
   const s = await guard();
 

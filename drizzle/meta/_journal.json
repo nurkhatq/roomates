@@ -36,6 +36,13 @@
       "when": 1788142099565,
       "tag": "0004_drop_pack_qty",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788144669110,
+      "tag": "0005_receipt",
+      "breakpoints": true
     }
   ]
 }

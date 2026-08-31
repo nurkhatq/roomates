@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db, itemPhotos, memberPhotos, householdPhotos } from '@/db';
+import { db, itemPhotos, memberPhotos, householdPhotos, purchasePhotos } from '@/db';
 
 /**
  * Фото отдаются отдельно от списков и кэшируются надолго: ссылка содержит
@@ -9,6 +9,7 @@ const TABLES = {
   item: { table: itemPhotos, key: itemPhotos.itemId },
   member: { table: memberPhotos, key: memberPhotos.memberId },
   house: { table: householdPhotos, key: householdPhotos.householdId },
+  receipt: { table: purchasePhotos, key: purchasePhotos.purchaseId },
 } as const;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ kind: string; id: string }> }) {

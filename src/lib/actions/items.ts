@@ -8,8 +8,9 @@ import { canEditItem } from '@/lib/rights';
 
 export type FormState = { error?: string; ok?: boolean };
 
-/** Фото режется на телефоне до 512px WebP; это потолок на случай, если что-то пошло не так. */
-const MAX_PHOTO_BYTES = 400_000;
+/** Потолок на случай, если сжатие на телефоне не сработало. */
+const MAX_PHOTO_BYTES = 700_000;
+const PHOTO_TOO_BIG = 'Фото слишком тяжёлое — попробуй снять ещё раз';
 
 export async function addItem(_prev: FormState, form: FormData): Promise<FormState> {
   const s = await guard();
@@ -60,7 +61,7 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
 }
 
 /** Заменить или добавить фото уже существующей вещи. */
-export async function setItemPhoto(itemId: string, dataUrl: string): Promise<void> {
+export async function setItemPhoto(itemId: string, dataUrl: string): Promise<string | void> {
   const s = await guard();
 
   const [row] = await db.select({ householdId: items.householdId })
@@ -68,11 +69,11 @@ export async function setItemPhoto(itemId: string, dataUrl: string): Promise<voi
   if (!row) return;
   assertOurs(row.householdId, s);
 
-  if (!dataUrl.startsWith('data:image/')) return;
+  if (!dataUrl.startsWith('data:image/')) return PHOTO_TOO_BIG;
   const comma = dataUrl.indexOf(',');
   const data = dataUrl.slice(comma + 1);
   const mime = dataUrl.slice(5, dataUrl.indexOf(';'));
-  if (data.length > MAX_PHOTO_BYTES) return;
+  if (data.length > MAX_PHOTO_BYTES) return PHOTO_TOO_BIG;
 
   await db.insert(itemPhotos).values({ itemId, data, mime, updatedAt: new Date() })
     .onConflictDoUpdate({ target: itemPhotos.itemId, set: { data, mime, updatedAt: new Date() } });

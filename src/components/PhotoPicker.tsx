@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { prepPhoto } from '@/lib/photo';
+import { prepPhoto, type PhotoMode } from '@/lib/photo';
 import { btnGhost } from '@/components/ui';
 import { t } from '@/lib/strings';
 
@@ -10,15 +10,15 @@ import { t } from '@/lib/strings';
  * Одна кнопка на все места — дом, аватарка, вещь.
  */
 /**
- * Фон вырезается только у вещей: предмет на прозрачном фоне выглядит как
- * товар на полке. Лицу и комнате это только вредит — от человека остался бы
- * силуэт, от квартиры мебель без стен.
+ * Съёмка и загрузка фото. Режим решает всё: аватарка режется квадратом из
+ * середины кадра, фото квартиры и чек просто ужимаются. Фон вырезается только
+ * у вещей — лицу и комнате это вредит: от человека остался бы силуэт.
  */
 export function PhotoPicker({
-  src, alt, size = 72, round = false, label, onPick, cutout = false,
+  src, alt, size = 72, round = false, label, onPick, mode = 'plain',
 }: {
   src: string | null; alt: string; size?: number; round?: boolean;
-  label: string; onPick: (dataUrl: string) => Promise<void>; cutout?: boolean;
+  label: string; onPick: (dataUrl: string) => Promise<string | void>; mode?: PhotoMode;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -28,11 +28,13 @@ export function PhotoPicker({
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setBusy(true); setNote(cutout ? t.things.removingBg : t.common.loading);
+    setBusy(true); setNote(mode === 'cutout' ? t.things.removingBg : t.common.loading);
     try {
-      const res = await prepPhoto(file, cutout);
-      await onPick(res.dataUrl);
-      setNote(cutout && !res.bgRemoved ? t.things.bgFailed : '');
+      const res = await prepPhoto(file, mode);
+      // Действие возвращает текст, если сохранить не вышло: раньше слишком
+      // тяжёлое фото просто пропадало, и человек не понимал почему.
+      const problem = await onPick(res.dataUrl);
+      setNote(problem || (mode === 'cutout' && !res.bgRemoved ? t.things.bgFailed : ''));
       start(() => {});
     } catch {
       setNote(t.things.photoFailed);
@@ -60,7 +62,7 @@ export function PhotoPicker({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <button type="button" className={btnGhost} onClick={() => ref.current?.click()} disabled={busy}>
-          {busy ? (cutout ? t.things.removingBg : t.common.loading) : label}
+          {busy ? (mode === 'cutout' ? t.things.removingBg : t.common.loading) : label}
         </button>
         {note && <span className="text-[11.5px] text-ink-3">{note}</span>}
       </div>

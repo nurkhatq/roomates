@@ -8,8 +8,12 @@ import { guard } from './guard';
 
 export type FormState = { error?: string; ok?: boolean };
 
-/** Фото режется на телефоне; это потолок на случай, если что-то пошло не так. */
-const MAX_PHOTO_BYTES = 400_000;
+/**
+ * Потолок на случай, если сжатие на телефоне не сработало. Раньше он был
+ * 400 000 и аватарка в PNG на 380 КБ в него не влезала — а действие при этом
+ * молча ничего не делало. Теперь и запас больше, и о превышении сообщаем.
+ */
+const MAX_PHOTO_BYTES = 700_000;
 
 const str = (v: FormDataEntryValue | null) => String(v ?? '').trim();
 const int = (v: FormDataEntryValue | null) => {
@@ -43,6 +47,8 @@ export async function updateHousehold(_prev: FormState, form: FormData): Promise
   return { ok: true };
 }
 
+const PHOTO_TOO_BIG = 'Фото слишком тяжёлое — попробуй снять ещё раз';
+
 function splitDataUrl(dataUrl: string): { data: string; mime: string } | null {
   if (!dataUrl.startsWith('data:image/')) return null;
   const comma = dataUrl.indexOf(',');
@@ -53,10 +59,10 @@ function splitDataUrl(dataUrl: string): { data: string; mime: string } | null {
   return { data, mime: dataUrl.slice(5, semi) };
 }
 
-export async function setHouseholdPhoto(dataUrl: string): Promise<void> {
+export async function setHouseholdPhoto(dataUrl: string): Promise<string | void> {
   const s = await guard();
   const parsed = splitDataUrl(dataUrl);
-  if (!parsed) return;
+  if (!parsed) return PHOTO_TOO_BIG;
 
   await db.insert(householdPhotos)
     .values({ householdId: s.household.id, ...parsed, updatedAt: new Date() })
@@ -68,10 +74,10 @@ export async function setHouseholdPhoto(dataUrl: string): Promise<void> {
 }
 
 /** Аватарку каждый ставит себе сам — чужую трогать незачем. */
-export async function setMyPhoto(dataUrl: string): Promise<void> {
+export async function setMyPhoto(dataUrl: string): Promise<string | void> {
   const s = await guard();
   const parsed = splitDataUrl(dataUrl);
-  if (!parsed) return;
+  if (!parsed) return PHOTO_TOO_BIG;
 
   await db.insert(memberPhotos)
     .values({ memberId: s.member.id, ...parsed, updatedAt: new Date() })

@@ -132,8 +132,52 @@ export function trimToContent(
   return out;
 }
 
-export function encode(canvas: HTMLCanvasElement, quality = 0.85): { dataUrl: string; mime: string } {
+/**
+ * WebP умеет не каждый браузер: телефон Нурхата, например, молча отдаёт PNG.
+ * Для фотографии PNG выходит в разы тяжелее — аватарка на 380 КБ не влезала
+ * в ограничение и терялась без единого слова. Поэтому если WebP недоступен,
+ * снимок уходит в JPEG, и только картинка с прозрачностью — вырезанная
+ * вещь — остаётся PNG.
+ */
+export function encode(
+  canvas: HTMLCanvasElement, quality = 0.85, needsAlpha = false,
+): { dataUrl: string; mime: string } {
   const webp = canvas.toDataURL('image/webp', quality);
   if (webp.startsWith('data:image/webp')) return { dataUrl: webp, mime: 'image/webp' };
-  return { dataUrl: canvas.toDataURL('image/png'), mime: 'image/png' };
+  if (needsAlpha) return { dataUrl: canvas.toDataURL('image/png'), mime: 'image/png' };
+  return { dataUrl: canvas.toDataURL('image/jpeg', quality), mime: 'image/jpeg' };
+}
+
+/**
+ * Квадрат из середины кадра — для аватарок. Человек снимает себя вертикально,
+ * и в круглой рамке от портрета осталась бы случайная полоса; берём центр.
+ */
+export function squareCrop(
+  bitmap: ImageBitmap | HTMLImageElement, size = 512,
+): HTMLCanvasElement {
+  const side = Math.min(bitmap.width, bitmap.height);
+  const sx = (bitmap.width - side) / 2;
+  const sy = (bitmap.height - side) / 2;
+  const out = document.createElement('canvas');
+  out.width = out.height = Math.min(size, side);
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('Браузер не дал холст для обработки фото');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap as CanvasImageSource, sx, sy, side, side, 0, 0, out.width, out.height);
+  return out;
+}
+
+/** Просто ужать под потолок, ничего не обрезая — для фото квартиры и чеков. */
+export function resizeTo(
+  bitmap: ImageBitmap | HTMLImageElement, maxSide: number,
+): HTMLCanvasElement {
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(bitmap.width * scale));
+  out.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('Браузер не дал холст для обработки фото');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap as CanvasImageSource, 0, 0, out.width, out.height);
+  return out;
 }

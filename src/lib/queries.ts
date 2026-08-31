@@ -1,7 +1,7 @@
 import { sql, eq, and, isNull, asc, desc, lte, inArray, getTableColumns } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import * as schema from '@/db/schema';
-import { purchases, purchaseShares, purchaseItems, items, itemPhotos, stockEvents, chores, choreEvents,
+import { purchases, purchaseShares, purchaseItems, purchasePhotos, items, itemPhotos, stockEvents, chores, choreEvents,
   householdPhotos, memberPhotos } from '@/db/schema';
 
 /**
@@ -31,7 +31,13 @@ export async function householdBalances(db: AnyDb, householdId: string, memberId
 }
 
 export async function recentPurchases(db: AnyDb, householdId: string, limit: number) {
-  const rows = await db.select().from(purchases)
+  const rows = await db
+    .select({
+      ...getTableColumns(purchases),
+      receiptVersion: sql<number>`coalesce(extract(epoch from ${purchasePhotos.updatedAt})::bigint, 0)`,
+    })
+    .from(purchases)
+    .leftJoin(purchasePhotos, eq(purchasePhotos.purchaseId, purchases.id))
     .where(eq(purchases.householdId, householdId))
     .orderBy(desc(purchases.boughtAt), desc(purchases.createdAt))
     .limit(limit);
