@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { db, purchases, purchaseShares, purchaseItems, items, stockEvents } from '@/db';
 import { sharesEqual } from '@/lib/money';
 import { guard, assertOurs, assertMember } from './guard';
+import { canDeletePurchase, canConfirmSettlement } from '@/lib/rights';
 import { t } from '@/lib/strings';
 
 export type FormState = { error?: string; ok?: boolean };
@@ -93,11 +94,21 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
   return { ok: true };
 }
 
-/** Погашение долга: тот же перевод денег, просто с одним участником. */
+/**
+ * Погашение долга: тот же перевод денег, просто с одним участником.
+ *
+ * Подтвердить перевод может только получатель — деньги пришли ему. Проверка
+ * обязана быть здесь, а не только в кнопке: серверное действие вызывается
+ * напрямую, и прятать кнопку — не защита.
+ */
 export async function recordSettlement(fromId: string, toId: string, amount: number): Promise<void> {
   const s = await guard();
   assertMember(fromId, s);
   assertMember(toId, s);
+  if (!canConfirmSettlement(toId, s.member.id)) {
+    throw new Error('Отметить перевод может только тот, кому переводят');
+  }
+  if (fromId === toId) throw new Error('Перевод самому себе ничего не значит');
   if (!Number.isFinite(amount) || amount <= 0) return;
 
   const [row] = await db.insert(purchases).values({
@@ -109,12 +120,32 @@ export async function recordSettlement(fromId: string, toId: string, amount: num
   revalidatePath('/zakup');
 }
 
+/**
+ * Удалить запись может только тот, кого она касается.
+ *
+ * Закуп — заплативший или тот, кто его записал: свою опечатку человек должен
+ * уметь исправить. Перевод — только две его стороны: иначе посторонний жилец
+ * отменяет чужое подтверждение оплаты, и долг воскресает.
+ */
 export async function deletePurchase(id: string): Promise<void> {
   const s = await guard();
-  const [row] = await db.select({ householdId: purchases.householdId })
-    .from(purchases).where(eq(purchases.id, id)).limit(1);
+
+  const [row] = await db.select({
+    householdId: purchases.householdId, kind: purchases.kind,
+    payerId: purchases.payerId, createdBy: purchases.createdBy,
+  }).from(purchases).where(eq(purchases.id, id)).limit(1);
   if (!row) return;
   assertOurs(row.householdId, s);
+
+  const parties = row.kind === 'settlement'
+    ? (await db.select({ memberId: purchaseShares.memberId })
+        .from(purchaseShares).where(eq(purchaseShares.purchaseId, id))).map((p) => p.memberId)
+    : [];
+  if (!canDeletePurchase(row, parties, s.member.id)) {
+    throw new Error('Эту запись может удалить только тот, кого она касается');
+  }
+
   await db.delete(purchases).where(eq(purchases.id, id));
   revalidatePath('/zakup');
 }
+

@@ -3,7 +3,7 @@ import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { recordStock, archiveItem, setItemPhoto, updateItem } from '@/lib/actions/items';
 import { prepPhoto } from '@/lib/photo';
-import { unitOptions } from '@/lib/units';
+import { unitOptions, altUnitOptions } from '@/lib/units';
 import { money } from '@/lib/money';
 import type { StockState } from '@/lib/stock';
 import { btnPlain, btnGhost, btnPrimary, btnDanger, inputCls, labelCls } from '@/components/ui';
@@ -168,8 +168,11 @@ export function ItemCard({
                 <div className="flex flex-col gap-1">
                   <span className={labelCls}>{t.things.altUnit}</span>
                   <div className="grid grid-cols-2 gap-3">
-                    <input name="altUnit" className={inputCls} defaultValue={item.altUnit ?? ''}
-                      placeholder={t.things.altExample} aria-label={t.things.altUnit} />
+                    <select name="altUnit" className={inputCls} defaultValue={item.altUnit ?? ''}
+                      aria-label={t.things.altUnit}>
+                      <option value="">{t.things.altNone}</option>
+                      {altUnitOptions(item.altUnit).map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
                     <input name="altQty" type="number" inputMode="decimal" min="0" step="0.5"
                       className={`${inputCls} num`} defaultValue={item.altQty ?? ''} placeholder="—"
                       aria-label={t.things.altQty} />

@@ -1,6 +1,7 @@
 import { db } from '@/db';
 import { requireSession } from '@/lib/session';
 import { householdBalances, recentPurchases, itemsWithEvents } from '@/lib/queries';
+import { canDeletePurchase } from '@/lib/rights';
 import { stockState, buySoon } from '@/lib/stock';
 import { nextRentDate } from '@/lib/rent';
 import { splitEqual } from '@/lib/money';
@@ -143,7 +144,8 @@ export default async function ZakupPage() {
               const inside = itemsBy.get(p.id) ?? [];
               return (
                 <PurchaseRow key={p.id} id={p.id}
-                  inside={inside.map((l) => `${l.name} · ${l.qty} ${l.unit}`)}>
+                  inside={inside.map((l) => `${l.name} · ${l.qty} ${l.unit}`)}
+                  canDelete={canDeletePurchase(p, sh.map((x) => x.memberId), s.member.id)}>
                   <Avatar name={nameOf(p.payerId)} index={idx.get(p.payerId) ?? 0} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px]">
@@ -154,6 +156,7 @@ export default async function ZakupPage() {
                     <div className="num truncate text-[11.5px] text-ink-3">
                       {dateFmt.format(p.boughtAt)}
                       {isSettlement ? ` · ${t.money.settlement}` : ` · ${nameOf(p.payerId)}`}
+                      {p.createdBy !== p.payerId && ` · ${t.money.recordedBy} ${nameOf(p.createdBy)}`}
                     </div>
                   </div>
                   <span className="shrink-0 text-right">

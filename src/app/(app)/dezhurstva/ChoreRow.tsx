@@ -43,7 +43,7 @@ export function ChoreRow({
       <button
         className={`${btnPlain} shrink-0 px-3`}
         disabled={pending}
-        onClick={() => start(() => { void markChoreDone(id, meId); })}
+        onClick={() => start(() => { void markChoreDone(id); })}
       >
         {pending ? '…' : t.chores.done}
       </button>

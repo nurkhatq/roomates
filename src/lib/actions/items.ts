@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, items, itemPhotos, stockEvents } from '@/db';
 import { guard, assertOurs, assertMember } from './guard';
+import { canEditItem } from '@/lib/rights';
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -100,10 +101,13 @@ export async function updateItem(
 ): Promise<void> {
   const s = await guard();
 
-  const [row] = await db.select({ householdId: items.householdId })
+  const [row] = await db.select({ householdId: items.householdId, ownerId: items.ownerId })
     .from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) return;
   assertOurs(row.householdId, s);
+  if (!canEditItem(row.ownerId, s.member.id)) {
+    throw new Error('Это личная вещь другого жильца');
+  }
 
   const next: Partial<typeof items.$inferInsert> = {};
   if (patch.name !== undefined && patch.name.trim()) next.name = patch.name.trim();
@@ -120,10 +124,13 @@ export async function updateItem(
 
 export async function archiveItem(itemId: string): Promise<void> {
   const s = await guard();
-  const [row] = await db.select({ householdId: items.householdId })
+  const [row] = await db.select({ householdId: items.householdId, ownerId: items.ownerId })
     .from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) return;
   assertOurs(row.householdId, s);
+  if (!canEditItem(row.ownerId, s.member.id)) {
+    throw new Error('Это личная вещь другого жильца');
+  }
   await db.update(items).set({ archivedAt: new Date() }).where(eq(items.id, itemId));
   revalidatePath('/veshi');
 }

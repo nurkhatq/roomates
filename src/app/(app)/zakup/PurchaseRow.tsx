@@ -9,8 +9,8 @@ import { t } from '@/lib/strings';
  * на 375px рядом с суммой, а ошибиться в сумме при вводе — обычное дело.
  */
 export function PurchaseRow({
-  id, children, inside,
-}: { id: string; children: React.ReactNode; inside: string[] }) {
+  id, children, inside, canDelete,
+}: { id: string; children: React.ReactNode; inside: string[]; canDelete: boolean }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
 
@@ -35,10 +35,14 @@ export function PurchaseRow({
       )}
       {open && (
         <div className="flex gap-2 pb-2.5">
-          <button className={`${btnDanger} flex-1`} disabled={pending}
-            onClick={() => start(() => { void deletePurchase(id); })}>
-            {pending ? t.common.loading : t.common.delete}
-          </button>
+          {canDelete ? (
+            <button className={`${btnDanger} flex-1`} disabled={pending}
+              onClick={() => start(() => { void deletePurchase(id); })}>
+              {pending ? t.common.loading : t.common.delete}
+            </button>
+          ) : (
+            <span className="flex-1 self-center text-[12px] text-ink-3">{t.money.notYours}</span>
+          )}
           <button className={btnGhost} onClick={() => setOpen(false)}>{t.common.cancel}</button>
         </div>
       )}

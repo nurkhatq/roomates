@@ -9,11 +9,16 @@ import { t } from '@/lib/strings';
  * Съёмка и загрузка фото: фон убирается, картинка обрезается по содержимому.
  * Одна кнопка на все места — дом, аватарка, вещь.
  */
+/**
+ * Фон вырезается только у вещей: предмет на прозрачном фоне выглядит как
+ * товар на полке. Лицу и комнате это только вредит — от человека остался бы
+ * силуэт, от квартиры мебель без стен.
+ */
 export function PhotoPicker({
-  src, alt, size = 72, round = false, label, onPick,
+  src, alt, size = 72, round = false, label, onPick, cutout = false,
 }: {
   src: string | null; alt: string; size?: number; round?: boolean;
-  label: string; onPick: (dataUrl: string) => Promise<void>;
+  label: string; onPick: (dataUrl: string) => Promise<void>; cutout?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -23,11 +28,11 @@ export function PhotoPicker({
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setBusy(true); setNote(t.things.removingBg);
+    setBusy(true); setNote(cutout ? t.things.removingBg : t.common.loading);
     try {
-      const res = await prepPhoto(file, true);
+      const res = await prepPhoto(file, cutout);
       await onPick(res.dataUrl);
-      setNote(res.bgRemoved ? '' : t.things.bgFailed);
+      setNote(cutout && !res.bgRemoved ? t.things.bgFailed : '');
       start(() => {});
     } catch {
       setNote(t.things.photoFailed);
@@ -55,7 +60,7 @@ export function PhotoPicker({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <button type="button" className={btnGhost} onClick={() => ref.current?.click()} disabled={busy}>
-          {busy ? t.things.removingBg : label}
+          {busy ? (cutout ? t.things.removingBg : t.common.loading) : label}
         </button>
         {note && <span className="text-[11.5px] text-ink-3">{note}</span>}
       </div>

@@ -4,7 +4,7 @@ import { addItem, type FormState } from '@/lib/actions/items';
 import { prepPhoto } from '@/lib/photo';
 import { Card, btnPrimary, btnGhost, btnPlain, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
-import { unitOptions, DEFAULT_UNIT } from '@/lib/units';
+import { unitOptions, altUnitOptions, DEFAULT_UNIT } from '@/lib/units';
 
 type Mate = { id: string; name: string; index: number };
 
@@ -97,8 +97,10 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
         <div className="flex flex-col gap-1">
           <span className={labelCls}>{t.things.altUnit}</span>
           <div className="grid grid-cols-2 gap-3">
-            <input name="altUnit" className={inputCls} autoComplete="off"
-              placeholder={t.things.altExample} aria-label={t.things.altUnit} />
+            <select name="altUnit" className={inputCls} defaultValue="" aria-label={t.things.altUnit}>
+              <option value="">{t.things.altNone}</option>
+              {altUnitOptions().map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
             <input name="altQty" className={`${inputCls} num`} type="number" inputMode="decimal"
               min="0" step="0.5" placeholder="10" aria-label={t.things.altQty} />
           </div>

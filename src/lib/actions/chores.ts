@@ -27,9 +27,13 @@ export async function addChore(_prev: FormState, form: FormData): Promise<FormSt
   return { ok: true };
 }
 
-export async function markChoreDone(choreId: string, memberId: string): Promise<void> {
+/**
+ * Отметку ставит тот, кто её жмёт. Раньше id жильца приходил с клиента —
+ * так можно было записать дежурство на другого и перекосить счётчик.
+ */
+export async function markChoreDone(choreId: string): Promise<void> {
   const s = await guard();
-  assertMember(memberId, s);
+  const memberId = s.member.id;
 
   const [row] = await db.select({ householdId: chores.householdId })
     .from(chores).where(eq(chores.id, choreId)).limit(1);
