@@ -1,6 +1,6 @@
 'use client';
 
-import { trimToSquare, encode } from './trim';
+import { trimToContent, encode } from './trim';
 
 /**
  * Подготовка фото вещи прямо на телефоне: убрать фон, обрезать по краям
@@ -32,7 +32,7 @@ export async function prepPhoto(file: File, removeBg: boolean): Promise<PhotoRes
 
   const bitmap = await createImageBitmap(source);
   try {
-    const canvas = trimToSquare(bitmap, { size: SIZE });
+    const canvas = trimToContent(bitmap, { maxSide: SIZE });
     const { dataUrl, mime } = encode(canvas);
     return { dataUrl, mime, bgRemoved };
   } finally {

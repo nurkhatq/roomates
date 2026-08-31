@@ -66,7 +66,7 @@ export function ItemCard({
         className="flex flex-col rounded-xl border border-line bg-card p-3 text-left">
         {/* Фото лежит прямо на фоне карточки: подложка вокруг вырезанного
             предмета выглядела бы как вторая рамка внутри первой. */}
-        <span className="relative mb-2 flex aspect-square w-full items-center justify-center">
+        <span className="relative mb-2 flex aspect-[4/5] w-full items-center justify-center">
           {item.hasPhoto ? (
             <Image src={`/api/photo/${item.id}?v=${item.photoVersion}`} alt="" fill sizes="(max-width:560px) 45vw, 180px"
               className="object-contain" unoptimized />
