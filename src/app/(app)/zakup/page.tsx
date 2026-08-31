@@ -2,6 +2,8 @@ import { db } from '@/db';
 import { requireSession } from '@/lib/session';
 import { householdBalances, recentPurchases, itemsWithEvents } from '@/lib/queries';
 import { stockState, buySoon } from '@/lib/stock';
+import { nextRentDate } from '@/lib/rent';
+import { splitEqual } from '@/lib/money';
 import { settle, money } from '@/lib/money';
 import { Avatar, Card, Eyebrow, Empty, Dot } from '@/components/ui';
 import { AddPurchase, type ShelfItem } from './AddPurchase';
@@ -37,6 +39,11 @@ export default async function ZakupPage() {
     }));
   const toBuy = shelf.filter((i) => i.needed);
 
+  const rentDue = nextRentDate(s.household.rentDay, now);
+  const rentShare = s.household.rentAmount > 0
+    ? splitEqual(s.household.rentAmount, s.roommates.length)[0]
+    : 0;
+
   const dateFmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' });
 
   return (
@@ -59,7 +66,7 @@ export default async function ZakupPage() {
                   <span className="text-right">
                     <span className="num block text-[15px] font-medium">{money(Math.abs(v))}</span>
                     <span className="block text-[11.5px] text-ink-3">
-                      {v > 0 ? 'ему должны' : 'он должен'}
+                      {v > 0 ? t.money.owedThem : t.money.theyOwe}
                     </span>
                   </span>
                 </div>
@@ -85,6 +92,20 @@ export default async function ZakupPage() {
             ))}
           </div>
           <p className="mt-3 text-[12px] text-ink-3">{t.money.settleHint}</p>
+        </Card>
+      )}
+
+      {rentDue && rentShare > 0 && rentDue.daysLeft <= 7 && (
+        <Card>
+          <Eyebrow>{t.house.rent}</Eyebrow>
+          <p className="text-[15px]">
+            {rentDue.daysLeft === 0
+              ? t.house.rentToday
+              : `${t.house.rentSoon} ${rentDue.daysLeft} ${t.chores.days}`}
+          </p>
+          <p className="num text-[12.5px] text-ink-2">
+            {money(rentShare)} {t.house.rentPerPerson}
+          </p>
         </Card>
       )}
 
@@ -124,7 +145,7 @@ export default async function ZakupPage() {
                     <div className="truncate text-[14px]">
                       {isSettlement
                         ? `${nameOf(p.payerId)} → ${nameOf(sh[0]?.memberId ?? '')}`
-                        : p.note || 'Закуп'}
+                        : p.note || t.money.purchaseFallback}
                     </div>
                     <div className="num truncate text-[11.5px] text-ink-3">
                       {dateFmt.format(p.boughtAt)}

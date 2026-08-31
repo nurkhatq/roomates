@@ -41,7 +41,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
             </PickMe>
           ))}
           {roommates.length === 0 && (
-            <p className="pb-3 text-[13px] text-ink-3">Тут пока никого. Добавься первым.</p>
+            <p className="pb-3 text-[13px] text-ink-3">{t.join.nobodyYet}</p>
           )}
         </div>
       </Card>

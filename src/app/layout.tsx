@@ -19,7 +19,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: t.app.name,
-  description: 'Закуп, долги, расходники и дежурства на общую квартиру',
+  description: t.app.tagline,
 };
 
 export const viewport: Viewport = {

@@ -18,7 +18,7 @@ export function BottomNav() {
   const path = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-card pb-[env(safe-area-inset-bottom,0px)]"
-      aria-label="Разделы">
+      aria-label={t.nav.label}>
       {TABS.map((tab) => {
         const active = path.startsWith(tab.href);
         return (

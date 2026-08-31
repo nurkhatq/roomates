@@ -3,6 +3,8 @@
  * вещи стоит что-то своё, оно добавляется в выбор — иначе при первом же
  * сохранении единица молча заменилась бы на «шт».
  */
+export const DEFAULT_UNIT = 'шт';
+
 export const UNITS = ['шт', 'рулон', 'пачка', 'бутылка', 'упаковка', 'л', 'мл', 'кг', 'г'] as const;
 
 export function unitOptions(current?: string | null): string[] {

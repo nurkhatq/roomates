@@ -3,9 +3,9 @@
  * иначе добавить казахский потом будет дороже, чем сделать это сразу.
  */
 export const ru = {
-  app: { name: 'Хата' },
+  app: { name: 'Хата', tagline: 'Закуп, долги, расходники и дежурства на общую квартиру' },
 
-  nav: { money: 'Закуп', things: 'Вещи', chores: 'Дежурства', me: 'Я' },
+  nav: { money: 'Закуп', things: 'Вещи', chores: 'Дежурства', me: 'Я', label: 'Разделы' },
 
   house: {
     title: 'Квартира',
@@ -28,7 +28,6 @@ export const ru = {
     save: 'Сохранить',
     rentSoon: 'Аренда через',
     rentToday: 'Аренда сегодня',
-    rentOverdue: 'Срок аренды прошёл',
   },
 
   me: {
@@ -57,6 +56,7 @@ export const ru = {
     enter: 'Войти',
     whoAreYou: 'Кто ты?',
     notListed: 'Меня тут нет',
+    nobodyYet: 'Тут пока никого. Добавься первым.',
     addMe: 'Добавить себя',
     yourName: 'Как тебя зовут',
     createTitle: 'Новая квартира',
@@ -71,8 +71,9 @@ export const ru = {
   money: {
     title: 'Закуп',
     balanceZero: 'Все в расчёте',
-    owesYou: 'должен тебе',
-    youOwe: 'ты должен',
+    owedThem: 'ему должны',
+    theyOwe: 'он должен',
+    purchaseFallback: 'Закуп',
     settleUp: 'Рассчитаться',
     settleHint: 'Меньше переводов не получится — считал по минимуму',
     markSettled: 'Отметить перевод',
@@ -84,27 +85,19 @@ export const ru = {
     date: 'Когда',
     save: 'Записать',
     cancel: 'Отмена',
-    everyone: 'Все',
-    paidBy: 'платил',
     perPerson: 'по',
     empty: 'Пока ничего не записано. Первый закуп — и балансы поедут.',
     needParticipants: 'Отметь хотя бы одного',
     needAmount: 'Впиши сумму',
     settlement: 'перевод',
     history: 'История',
-    showMore: 'Показать ещё',
     whatTook: 'Что взяли с полки',
     useSubtotal: 'Подставить сумму позиций',
   },
 
   things: {
     title: 'Вещи',
-    needCheck: 'Надо пересчитать',
     needCheckHint: 'Система спрашивает не каждый день, а когда подходит срок',
-    runningOut: 'Скоро кончится',
-    all: 'Все вещи',
-    shared: 'Общие',
-    mine: 'Мои',
     add: 'Добавить вещь',
     name: 'Что это',
     unit: 'В чём считаем',
@@ -119,13 +112,10 @@ export const ru = {
     boughtQty: 'Сколько взяли',
     check: 'Пересчитать',
     checkQty: 'Сколько осталось',
-    left: 'осталось',
     perDay: 'в день',
     daysLeft: 'хватит на',
     days: 'дн.',
-    runsOut: 'кончится',
     unknownRate: 'расход пока неизвестен',
-    roughRate: 'расход прикидочный',
     checkedNever: 'ни разу не считали',
     nextCheck: 'следующий пересчёт',
     unlogged: 'Похоже, закупку не записали — один замер выкинул',
@@ -138,14 +128,12 @@ export const ru = {
     photoFailed: 'С этим файлом не получилось. Попробуй другое фото.',
     shelf: 'Полка',
     price: 'Цена за единицу',
-    priceShort: 'цена',
     level: 'запас',
     toBuy: 'Надо закупить',
     toBuyHint: 'Сюда попадает всё, что кончилось или на исходе',
     addToPurchase: 'Занести в закуп',
     edit: 'Изменить',
     saveEdit: 'Сохранить изменения',
-    lastPrice: 'последняя цена',
   },
 
   chores: {
@@ -177,8 +165,10 @@ export const ru = {
     cancel: 'Отмена',
     delete: 'Удалить',
     loading: 'Загружаю…',
-    error: 'Что-то пошло не так',
     leave: 'Выйти',
+    and: ' и ',
+    copied: 'Ссылка скопирована',
+    youSuffix: ' (ты)',
   },
 } as const;
 

@@ -34,7 +34,7 @@ export function ChoreRow({
         <div className="truncate text-[14.5px]">{name}</div>
         <div className="truncate text-[11.5px] text-ink-3">
           {crew.length
-            ? `${t.chores.turnOf} ${crew.map((m) => m.name + (m.id === meId ? ` (${t.common.you})` : '')).join(' и ')}`
+            ? `${t.chores.turnOf} ${crew.map((m) => m.name + (m.id === meId ? ` (${t.common.you})` : '')).join(t.common.and)}`
             : ''}
           {when ? ` · ${when}` : ''}
           {st.daysSince !== null ? ` · ${Math.floor(st.daysSince)} ${t.chores.daysSince}` : ''}

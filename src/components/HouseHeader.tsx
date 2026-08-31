@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { t } from '@/lib/strings';
 
 export function HouseHeader({ houseName, code, me }: { houseName: string; code: string; me: string }) {
   const [copied, setCopied] = useState(false);
@@ -20,7 +21,7 @@ export function HouseHeader({ houseName, code, me }: { houseName: string; code: 
         <div className="text-[12px] text-ink-3">{me}</div>
       </Link>
       <button onClick={share} className="min-h-11 rounded-lg border border-line px-3 text-[12px] font-medium text-ink-2">
-        {copied ? 'Ссылка скопирована' : <span className="num">{code}</span>}
+        {copied ? t.common.copied : <span className="num">{code}</span>}
       </button>
     </header>
   );

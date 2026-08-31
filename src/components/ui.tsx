@@ -1,4 +1,5 @@
 import { personVar, initials } from '@/lib/colors';
+import { t } from '@/lib/strings';
 
 /** Кольцо, а не заливка: инициалы всегда на фоне карточки, контраст не зависит от цвета жильца. */
 export function Avatar({
@@ -32,7 +33,7 @@ export function Person({ name, index, you = false }: { name: string; index: numb
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
       <Avatar name={name} index={index} size={26} />
-      <span className="truncate">{name}{you ? ' (ты)' : ''}</span>
+      <span className="truncate">{name}{you ? t.common.youSuffix : ''}</span>
     </span>
   );
 }

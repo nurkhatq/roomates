@@ -4,7 +4,7 @@ import { addItem, type FormState } from '@/lib/actions/items';
 import { prepPhoto } from '@/lib/photo';
 import { Card, btnPrimary, btnGhost, btnPlain, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
-import { unitOptions } from '@/lib/units';
+import { unitOptions, DEFAULT_UNIT } from '@/lib/units';
 
 type Mate = { id: string; name: string; index: number };
 
@@ -29,9 +29,9 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
     try {
       const res = await prepPhoto(file, true);
       setPhoto(res.dataUrl);
-      setPhotoNote(res.bgRemoved ? '' : 'Фон убрать не вышло — оставил фото как есть');
+      setPhotoNote(res.bgRemoved ? '' : t.things.bgFailed);
     } catch {
-      setPhotoNote('С этим файлом не получилось. Попробуй другое фото.');
+      setPhotoNote(t.things.photoFailed);
     } finally {
       setWorking(false);
     }
@@ -73,7 +73,7 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>{t.things.unit}</span>
-            <select name="unit" className={inputCls} defaultValue="шт">
+            <select name="unit" className={inputCls} defaultValue={DEFAULT_UNIT}>
               {unitOptions().map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
           </label>
