@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Хата
 
-## Getting Started
+Общая квартира: закуп и долги, расходники с пересчётом по сроку, дежурства.
+Next.js + Postgres на Neon, деплой на Vercel — всё на бесплатных тарифах.
 
-First, run the development server:
+## Что умеет
+
+**Закуп.** Записал трату, отметил, на кого делим — система считает баланс каждого
+и минимальный набор переводов, которым все рассчитываются. Для четверых это три
+перевода вместо двенадцати попарных.
+
+**Вещи.** Купили — записали сколько. Через заданный срок система просит
+пересчитать. По разнице между пересчётами она узнаёт реальный расход и дальше
+назначает срок сама, ближе к моменту, когда запас подходит к концу. Каждый день
+никто ничего не спрашивает. Вещи бывают общие и личные.
+
+**Дежурства.** Очередь по кругу и счётчик «кто сколько раз». Без просрочек
+красным и без напоминаний — только факт, кто когда делал.
+
+## Запуск
 
 ```bash
+npm install
+cp .env.example .env.local     # вставить строку подключения из Neon
+npm run db:push                # накатить схему
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Без интернета
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Postgres поднимается прямо в процессе, отдельный сервер не нужен:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run db:local                                          # в одном окне
+DATABASE_URL='postgresql://postgres@127.0.0.1:5433/postgres' npm run db:seed-dev
+DATABASE_URL='postgresql://postgres@127.0.0.1:5433/postgres' npm run dev
+```
 
-## Learn More
+Тестовая квартира появится по коду `TEST01`. Скрипт посева работает только
+с локальной базой и на боевую ничего не пишет.
 
-To learn more about Next.js, take a look at the following resources:
+## Тесты
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm test
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+27 тестов: расчёт долей и переводов, предсказание расхода, очередь дежурств,
+плюс запросы к настоящему Postgres, который поднимается внутри теста.
 
-## Deploy on Vercel
+## Как заходят жильцы
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Ссылка вида `/join/КОД` — человек тыкает своё имя, и всё. Ни регистрации, ни
+паролей: иначе соседи не начнут пользоваться. У кого ссылка — тот внутри, так
+что кидать её стоит только в свой чат. Столбец `members.oauth_sub` оставлен
+пустым под вход через Google, когда понадобится настоящая проверка личности.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Деплой
+
+1. Проект на [neon.com](https://neon.com) → скопировать pooled connection string
+2. Импортировать репозиторий в Vercel, добавить `DATABASE_URL` в Environment Variables
+3. `npm run db:push` с той же строкой — один раз, чтобы создать таблицы
