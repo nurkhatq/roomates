@@ -29,7 +29,7 @@ export default async function VeshiPage() {
         item: {
           id: r.id, name: r.name, unit: r.unit, ownerId: r.ownerId,
           checkIntervalDays: r.checkIntervalDays, price: r.price ?? null,
-          packQty: r.packQty ?? null,
+          altUnit: r.altUnit ?? null, altQty: r.altQty ?? null,
           hasPhoto: Boolean(r.hasPhoto), photoVersion: Number(r.photoVersion) || 0,
         } satisfies CardItem,
         st,

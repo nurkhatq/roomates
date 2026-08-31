@@ -94,12 +94,16 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
           </label>
         </div>
 
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>{t.things.pack}</span>
-          <input name="packQty" className={`${inputCls} num`} type="number" inputMode="decimal"
-            min="0" step="0.5" placeholder="10" />
-          <span className="text-[11.5px] text-ink-3">{t.things.packHint}</span>
-        </label>
+        <div className="flex flex-col gap-1">
+          <span className={labelCls}>{t.things.altUnit}</span>
+          <div className="grid grid-cols-2 gap-3">
+            <input name="altUnit" className={inputCls} autoComplete="off"
+              placeholder={t.things.altExample} aria-label={t.things.altUnit} />
+            <input name="altQty" className={`${inputCls} num`} type="number" inputMode="decimal"
+              min="0" step="0.5" placeholder="10" aria-label={t.things.altQty} />
+          </div>
+          <span className="text-[11.5px] text-ink-3">{t.things.altHint}</span>
+        </div>
 
         <label className="flex flex-col gap-1">
           <span className={labelCls}>{t.things.price}</span>

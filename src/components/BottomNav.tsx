@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { t } from '@/lib/strings';
 
@@ -16,8 +17,24 @@ const TABS = [
 
 export function BottomNav() {
   const path = usePathname();
+
+  // Клавиатура на телефоне выталкивает fixed-элементы, и панель разделов
+  // начинает прыгать поверх поля ввода. Проще убрать её на время набора.
+  useEffect(() => {
+    const isField = (el: EventTarget | null) =>
+      el instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+    const on = (e: FocusEvent) => { if (isField(e.target)) document.body.dataset.typing = '1'; };
+    const off = () => { delete document.body.dataset.typing; };
+    document.addEventListener('focusin', on);
+    document.addEventListener('focusout', off);
+    return () => {
+      document.removeEventListener('focusin', on);
+      document.removeEventListener('focusout', off);
+      off();
+    };
+  }, []);
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-card pb-[env(safe-area-inset-bottom,0px)]"
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-card pb-[env(safe-area-inset-bottom,0px)]"
       aria-label={t.nav.label}>
       {TABS.map((tab) => {
         const active = path.startsWith(tab.href);

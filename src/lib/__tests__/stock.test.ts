@@ -166,3 +166,35 @@ test('полная полка в закуп не просится', () => {
   assert.equal(s.level, 1);
   assert.equal(buySoon(s), false);
 });
+
+test('два пересчёта подряд не превращаются в бешеный расход', () => {
+  // Ровно то, что случилось вживую: 400 г пересчитали в 0 через 41 минуту.
+  // Без порога выходило 13 900 г в день, и вещь навсегда висела в закупе.
+  const ev: StockEvent[] = [
+    { kind: 'check', qty: 400, at: new Date(NOW.getTime() - 2 * DAY) },
+    { kind: 'check', qty: 0, at: new Date(NOW.getTime() - 2 * DAY + 41 * 60000) },
+    { kind: 'purchase', qty: 400, at: ago(1) },
+  ];
+  const s = stockState(ev, 30, NOW);
+  assert.equal(s.ratePerDay, null, 'замер за 41 минуту считать нельзя');
+  assert.equal(s.current, 400);
+  assert.equal(buySoon(s), false, 'после закупа вещь обязана уйти из списка');
+});
+
+test('нормальный замер за несколько дней по-прежнему считается', () => {
+  const ev: StockEvent[] = [
+    { kind: 'check', qty: 400, at: ago(10) },
+    { kind: 'check', qty: 200, at: ago(5) },
+  ];
+  const s = stockState(ev, 30, NOW);
+  assert.equal(s.ratePerDay, 40);
+});
+
+test('замер ровно в полсуток уже годится', () => {
+  const ev: StockEvent[] = [
+    { kind: 'check', qty: 10, at: new Date(NOW.getTime() - 1.5 * DAY) },
+    { kind: 'check', qty: 5, at: new Date(NOW.getTime() - 1.0 * DAY) },
+  ];
+  const s = stockState(ev, 7, NOW);
+  assert.equal(s.ratePerDay, 10);
+});

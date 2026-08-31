@@ -11,7 +11,8 @@ import { t } from '@/lib/strings';
 
 export type CardItem = {
   id: string; name: string; unit: string; ownerId: string | null;
-  checkIntervalDays: number; price: number | null; packQty: number | null;
+  checkIntervalDays: number; price: number | null;
+  altUnit: string | null; altQty: number | null;
   hasPhoto: boolean; photoVersion: number;
 };
 type Mate = { id: string; name: string; index: number };
@@ -26,6 +27,11 @@ export function ItemCard({
   const [mode, setMode] = useState<'check' | 'buy'>('check');
   const [editing, setEditing] = useState(false);
   const [qty, setQty] = useState('');
+  // Считать можно в любой из двух мер: картошку берут килограммами, а на
+  // полке пересчитывают штуками.
+  const [inAlt, setInAlt] = useState(false);
+  const canAlt = Boolean(item.altUnit && item.altQty && item.altQty > 0);
+  const factor = canAlt && inAlt ? (item.altQty as number) : 1;
   const [working, setWorking] = useState(false);
   const [note, setNote] = useState('');
   const [pending, start] = useTransition();
@@ -40,7 +46,7 @@ export function ItemCard({
     const n = Number(qty);
     if (!Number.isFinite(n) || n < 0) return;
     start(async () => {
-      await recordStock(item.id, mode === 'buy' ? 'purchase' : 'check', n);
+      await recordStock(item.id, mode === 'buy' ? 'purchase' : 'check', n * factor);
       setQty(''); setOpen(false);
     });
   };
@@ -51,7 +57,8 @@ export function ItemCard({
         name: String(form.get('name') ?? ''),
         unit: String(form.get('unit') ?? ''),
         price: String(form.get('price') ?? '').trim() === '' ? null : Number(form.get('price')),
-        packQty: String(form.get('packQty') ?? '').trim() === '' ? null : Number(form.get('packQty')),
+        altUnit: String(form.get('altUnit') ?? ''),
+        altQty: String(form.get('altQty') ?? '').trim() === '' ? null : Number(form.get('altQty')),
         checkIntervalDays: Number(form.get('interval')),
       });
       setEditing(false);
@@ -158,11 +165,16 @@ export function ItemCard({
                       className={`${inputCls} num`} defaultValue={item.price ?? ''} placeholder="—" />
                   </label>
                 </div>
-                <label className="flex flex-col gap-1">
-                  <span className={labelCls}>{t.things.pack}</span>
-                  <input name="packQty" type="number" inputMode="decimal" min="0" step="0.5"
-                    className={`${inputCls} num`} defaultValue={item.packQty ?? ''} placeholder="—" />
-                </label>
+                <div className="flex flex-col gap-1">
+                  <span className={labelCls}>{t.things.altUnit}</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input name="altUnit" className={inputCls} defaultValue={item.altUnit ?? ''}
+                      placeholder={t.things.altExample} aria-label={t.things.altUnit} />
+                    <input name="altQty" type="number" inputMode="decimal" min="0" step="0.5"
+                      className={`${inputCls} num`} defaultValue={item.altQty ?? ''} placeholder="—"
+                      aria-label={t.things.altQty} />
+                  </div>
+                </div>
                 <label className="flex flex-col gap-1">
                   <span className={labelCls}>{t.things.interval}</span>
                   <input name="interval" type="number" inputMode="numeric" min="1"
@@ -186,13 +198,32 @@ export function ItemCard({
                   </button>
                 </div>
 
-                <label className="mb-3 flex flex-col gap-1">
+                <div className="mb-3 flex flex-col gap-1">
                   <span className={labelCls}>
-                    {mode === 'check' ? t.things.checkQty : t.things.boughtQty} ({item.unit})
+                    {mode === 'check' ? t.things.checkQty : t.things.boughtQty}
                   </span>
-                  <input className={`${inputCls} num`} type="number" inputMode="decimal" min="0" step="0.5"
-                    value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />
-                </label>
+                  <div className="flex gap-2">
+                    <input className={`${inputCls} num flex-1`} type="number" inputMode="decimal" min="0" step="0.5"
+                      value={qty} onChange={(e) => setQty(e.target.value)}
+                      onFocus={(e) => e.target.select()} autoFocus
+                      aria-label={mode === 'check' ? t.things.checkQty : t.things.boughtQty} />
+                    {canAlt ? (
+                      <button type="button" onClick={() => setInAlt((v) => !v)}
+                        className="min-h-11 shrink-0 rounded-lg border border-line-2 px-3 text-[13px]">
+                        {inAlt ? item.altUnit : item.unit}
+                      </button>
+                    ) : (
+                      <span className="flex min-h-11 shrink-0 items-center px-2 text-[13px] text-ink-3">
+                        {item.unit}
+                      </span>
+                    )}
+                  </div>
+                  {canAlt && inAlt && qty !== '' && (
+                    <span className="num text-[11.5px] text-ink-3">
+                      = {Math.round(Number(qty) * factor * 10) / 10} {item.unit}
+                    </span>
+                  )}
+                </div>
 
                 <button className={`${btnPrimary} mb-3 w-full`} onClick={submit} disabled={pending || qty === ''}>
                   {pending ? t.common.loading : t.common.save}

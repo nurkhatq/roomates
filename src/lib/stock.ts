@@ -41,6 +41,13 @@ const days = (a: Date, b: Date) => (b.getTime() - a.getTime()) / DAY;
 const LOW = 0.3;
 /** Не дёргать чаще, чем раз в двое суток, даже если расход бешеный. */
 const MIN_GAP_DAYS = 2;
+/**
+ * Короче этого срока замер расхода не считается. Два пересчёта с разницей в
+ * сорок минут не говорят ничего о суточном расходе: если за это время ушло
+ * пол-упаковки, выходит «четырнадцать килограммов в день», и вещь навсегда
+ * застревает в списке закупа. Так и случилось на первом же тестовом пересчёте.
+ */
+const MIN_SAMPLE_DAYS = 0.5;
 
 export function stockState(
   events: StockEvent[],
@@ -70,7 +77,7 @@ export function stockState(
       const consumed = prevCheck.qty + boughtSincePrevCheck - e.qty;
       if (span > 0) {
         if (consumed < 0) unlogged++; // остаток вырос — закупку не записали, замер выкидываем
-        else samples.push({ rate: consumed / span, at: e.at });
+        else if (span >= MIN_SAMPLE_DAYS) samples.push({ rate: consumed / span, at: e.at });
       }
     }
     prevCheck = { qty: e.qty, at: e.at };

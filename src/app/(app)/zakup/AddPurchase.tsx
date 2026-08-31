@@ -8,13 +8,14 @@ import { t } from '@/lib/strings';
 type Mate = { id: string; name: string; index: number };
 export type ShelfItem = {
   id: string; name: string; unit: string;
-  price: number | null; packQty: number | null; needed: boolean;
+  price: number | null; altUnit: string | null; altQty: number | null; needed: boolean;
 };
-type Line = { qty: string; amount: string };
+/** qty хранится в той мере, что выбрана в строке; в базовые единицы переводим при отправке. */
+type Line = { qty: string; amount: string; alt: boolean };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const BLANK_LINE: Line = { qty: '1', amount: '' };
+const BLANK_LINE: Line = { qty: '', amount: '', alt: false };
 
 export function AddPurchase({
   roommates, meId, shelf,
@@ -40,7 +41,7 @@ export function AddPurchase({
 
   const openWithNeeded = () => {
     const seeded: Record<string, Line> = {};
-    for (const i of needed) seeded[i.id] = { qty: '1', amount: i.price ? String(i.price) : '' };
+    for (const i of needed) seeded[i.id] = { ...BLANK_LINE };
     setLines(seeded);
     setShowShelf(true);
     setOpen(true);
@@ -75,13 +76,20 @@ export function AddPurchase({
         delete rest[id];
         return rest;
       }
-      return { ...l, [id]: { qty: '1', amount: item.price ? String(item.price) : '' } };
+      void item;
+      return { ...l, [id]: { ...BLANK_LINE } };
     });
 
   const chosen = Object.entries(lines);
   const subtotal = chosen.reduce((a, [, v]) => a + (Math.round(Number(v.amount)) || 0), 0);
+  const factorOf = (id: string, v: Line) => {
+    const it = shelf.find((x) => x.id === id);
+    return v.alt && it?.altQty ? it.altQty : 1;
+  };
   const payload = chosen.map(([itemId, v]) => ({
-    itemId, qty: Number(v.qty) || 0, amount: Math.round(Number(v.amount)) || 0,
+    itemId,
+    qty: (Number(v.qty) || 0) * factorOf(itemId, v),
+    amount: Math.round(Number(v.amount)) || 0,
   }));
 
   return (
@@ -106,38 +114,53 @@ export function AddPurchase({
             </button>
             {showShelf && (
               <div className="flex flex-col">
+                {/* Название на своей строке, поля под ним: втиснуть в один ряд
+                    галочку, имя, количество, меру и цену на 375px невозможно —
+                    название сжималось до пары букв. */}
                 {shelf.map((i) => {
-                  const on = Boolean(lines[i.id]);
+                  const line = lines[i.id];
+                  const on = Boolean(line);
+                  const canAlt = Boolean(i.altUnit && i.altQty && i.altQty > 0);
+                  const base = on && line.alt && i.altQty ? (Number(line.qty) || 0) * i.altQty : null;
                   return (
-                    <div key={i.id} className="flex items-center gap-2 border-b border-line py-2 last:border-b-0">
-                      <input type="checkbox" checked={on} onChange={() => toggleLine(i.id, i)}
-                        className="h-5 w-5 shrink-0 accent-[var(--accent)]"
-                        aria-label={i.name} />
-                      <span className="min-w-0 flex-1 truncate text-[13.5px]">
-                        {i.name}
-                        {i.needed && <span className="ml-1 text-[11px] text-attn">{t.things.buyShort}</span>}
-                      </span>
+                    <div key={i.id} className="border-b border-line py-2 last:border-b-0">
+                      <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
+                        <input type="checkbox" checked={on} onChange={() => toggleLine(i.id, i)}
+                          className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+                        <span className="min-w-0 flex-1 truncate text-[14px]">{i.name}</span>
+                        {i.needed && <span className="shrink-0 text-[11px] text-attn">{t.things.buyShort}</span>}
+                        {i.price !== null && (
+                          <span className="num shrink-0 text-[11px] text-ink-3">{money(i.price)}/{i.unit}</span>
+                        )}
+                      </label>
+
                       {on && (
-                        <>
-                          {/* В магазине берут упаковками, а считаем мы единицами.
-                              Кнопка добавляет упаковку, чтобы не умножать в уме. */}
-                          {i.packQty ? (
-                            <button type="button"
-                              onClick={() => setLine(i.id, {
-                                qty: String((Number(lines[i.id].qty) || 0) + (i.packQty ?? 0)),
-                              })}
-                              className="h-11 shrink-0 rounded-lg border border-line px-2 text-[11px] text-ink-2">
-                              +{i.packQty} {t.things.addPack}
+                        <div className="mt-1.5 flex items-center gap-2 pl-7">
+                          <input value={line.qty} onChange={(e) => setLine(i.id, { qty: e.target.value })}
+                            onFocus={(e) => e.target.select()}
+                            type="number" inputMode="decimal" min="0" step="0.5" placeholder="1"
+                            className={`${inputCls} num w-20 px-2 text-right`}
+                            aria-label={`${i.name}: сколько`} />
+                          {canAlt ? (
+                            <button type="button" onClick={() => setLine(i.id, { alt: !line.alt })}
+                              className="min-h-11 shrink-0 rounded-lg border border-line-2 px-2.5 text-[12.5px]"
+                              aria-label={`${i.name}: мера`}>
+                              {line.alt ? i.altUnit : i.unit}
                             </button>
-                          ) : null}
-                          <input value={lines[i.id].qty} onChange={(e) => setLine(i.id, { qty: e.target.value })}
-                            type="number" inputMode="decimal" min="0" step="0.5"
-                            className={`${inputCls} num w-16 px-2 text-right`} aria-label={`${i.name}: сколько`} />
-                          <span className="w-10 shrink-0 text-[11px] text-ink-3">{i.unit}</span>
-                          <input value={lines[i.id].amount} onChange={(e) => setLine(i.id, { amount: e.target.value })}
-                            type="number" inputMode="numeric" min="0" placeholder="₸"
-                            className={`${inputCls} num w-20 px-2 text-right`} aria-label={`${i.name}: сколько отдали`} />
-                        </>
+                          ) : (
+                            <span className="shrink-0 text-[12px] text-ink-3">{i.unit}</span>
+                          )}
+                          <input value={line.amount} onChange={(e) => setLine(i.id, { amount: e.target.value })}
+                            onFocus={(e) => e.target.select()}
+                            type="number" inputMode="numeric" min="0" placeholder="тг"
+                            className={`${inputCls} num min-w-0 flex-1 px-2 text-right`}
+                            aria-label={`${i.name}: сколько отдали`} />
+                        </div>
+                      )}
+                      {base !== null && line.qty !== '' && (
+                        <div className="num pl-7 pt-1 text-[11px] text-ink-3">
+                          = {Math.round(base * 10) / 10} {i.unit}
+                        </div>
                       )}
                     </div>
                   );

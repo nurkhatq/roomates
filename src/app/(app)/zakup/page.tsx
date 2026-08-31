@@ -34,7 +34,7 @@ export default async function ZakupPage() {
   const shelf: ShelfItem[] = itemRows
     .filter((r) => r.ownerId === null || r.ownerId === s.member.id)
     .map((r) => ({
-      id: r.id, name: r.name, unit: r.unit, price: r.price ?? null, packQty: r.packQty ?? null,
+      id: r.id, name: r.name, unit: r.unit, price: r.price ?? null, altUnit: r.altUnit ?? null, altQty: r.altQty ?? null,
       needed: buySoon(stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now), 3),
     }));
   const toBuy = shelf.filter((i) => i.needed);

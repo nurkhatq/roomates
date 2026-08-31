@@ -22,6 +22,20 @@
       "when": 1788141294460,
       "tag": "0002_peaceful_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788142099151,
+      "tag": "0003_alt_measure",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788142099565,
+      "tag": "0004_drop_pack_qty",
+      "breakpoints": true
     }
   ]
 }

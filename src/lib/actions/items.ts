@@ -19,8 +19,9 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   const unit = String(form.get('unit') ?? 'шт').trim() || 'шт';
   const interval = Math.max(1, Math.round(Number(form.get('interval')) || 7));
 
-  const packRaw = String(form.get('packQty') ?? '').trim();
-  const packQty = packRaw === '' ? null : Math.max(0, Number(packRaw) || 0) || null;
+  const altUnit = String(form.get('altUnit') ?? '').trim() || null;
+  const altRaw = String(form.get('altQty') ?? '').trim();
+  const altQty = altRaw === '' ? null : Math.max(0, Number(altRaw) || 0) || null;
 
   const priceRaw = String(form.get('price') ?? '').trim();
   const price = priceRaw === '' ? null : Math.max(0, Math.round(Number(priceRaw) || 0));
@@ -30,7 +31,8 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   if (ownerId) assertMember(ownerId, s);
 
   const [row] = await db.insert(items).values({
-    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price, packQty,
+    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price,
+    altUnit: altQty ? altUnit : null, altQty: altUnit ? altQty : null,
   }).returning({ id: items.id });
 
   const photo = String(form.get('photo') ?? '');
@@ -94,7 +96,7 @@ export async function recordStock(itemId: string, kind: 'purchase' | 'check', qt
 export async function updateItem(
   itemId: string,
   patch: { name?: string; unit?: string; price?: number | null;
-           packQty?: number | null; checkIntervalDays?: number },
+           altUnit?: string | null; altQty?: number | null; checkIntervalDays?: number },
 ): Promise<void> {
   const s = await guard();
 
@@ -107,7 +109,8 @@ export async function updateItem(
   if (patch.name !== undefined && patch.name.trim()) next.name = patch.name.trim();
   if (patch.unit !== undefined && patch.unit.trim()) next.unit = patch.unit.trim();
   if (patch.price !== undefined) next.price = patch.price === null ? null : Math.max(0, Math.round(patch.price));
-  if (patch.packQty !== undefined) next.packQty = patch.packQty === null ? null : Math.max(0, patch.packQty) || null;
+  if (patch.altQty !== undefined) next.altQty = patch.altQty === null ? null : Math.max(0, patch.altQty) || null;
+  if (patch.altUnit !== undefined) next.altUnit = patch.altUnit?.trim() || null;
   if (patch.checkIntervalDays !== undefined) next.checkIntervalDays = Math.max(1, Math.round(patch.checkIntervalDays));
   if (Object.keys(next).length === 0) return;
 
