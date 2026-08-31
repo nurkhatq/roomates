@@ -56,7 +56,13 @@ export async function itemsWithEvents(db: AnyDb, householdId: string, perItem: n
   // hasPhoto считается прямо здесь: без него страница дёргала бы маршрут
   // картинки у каждой вещи, включая те, у которых фото нет.
   const rows = await db
-    .select({ ...getTableColumns(items), hasPhoto: sql<boolean>`(${itemPhotos.itemId} is not null)` })
+    .select({
+      ...getTableColumns(items),
+      hasPhoto: sql<boolean>`(${itemPhotos.itemId} is not null)`,
+      // Маршрут фото кэшируется навсегда, поэтому ссылка должна меняться
+      // при замене картинки — иначе на карточке останется старая.
+      photoVersion: sql<number>`coalesce(extract(epoch from ${itemPhotos.updatedAt})::bigint, 0)`,
+    })
     .from(items)
     .leftJoin(itemPhotos, eq(itemPhotos.itemId, items.id))
     .where(and(eq(items.householdId, householdId), isNull(items.archivedAt)))

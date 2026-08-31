@@ -69,5 +69,6 @@ const BTN = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg p
 export const btnPrimary = `${BTN} bg-accent text-accent-ink`;
 export const btnPlain = `${BTN} border border-line-2 bg-card text-ink`;
 export const btnGhost = `${BTN} border border-line bg-transparent text-ink`;
+export const btnDanger = `${BTN} border border-attn-line bg-transparent text-attn`;
 export const inputCls = 'min-h-11 w-full min-w-0 rounded-lg border border-line-2 bg-card px-3 py-2 focus:border-accent';
 export const labelCls = 'text-[12px] font-medium text-ink-2';

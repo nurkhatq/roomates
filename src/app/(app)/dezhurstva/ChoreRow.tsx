@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react';
 import { markChoreDone, archiveChore } from '@/lib/actions/chores';
 import type { ChoreState } from '@/lib/chores';
-import { Avatar, btnPlain, btnGhost } from '@/components/ui';
+import { Avatar, btnPlain, btnGhost, btnDanger } from '@/components/ui';
 import { t } from '@/lib/strings';
 
 type Mate = { id: string; name: string; index: number };
@@ -44,7 +44,7 @@ export function ChoreRow({
     </div>
     {open && (
       <div className="flex gap-2 pb-2.5">
-        <button className={`${btnGhost} flex-1 text-attn`} disabled={pending}
+        <button className={`${btnDanger} flex-1`} disabled={pending}
           onClick={() => start(() => { void archiveChore(id); })}>
           {t.chores.remove}
         </button>

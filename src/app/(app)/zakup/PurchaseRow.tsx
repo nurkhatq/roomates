@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { deletePurchase } from '@/lib/actions/purchases';
-import { btnGhost } from '@/components/ui';
+import { btnGhost, btnDanger } from '@/components/ui';
 import { t } from '@/lib/strings';
 
 /**
@@ -21,7 +21,7 @@ export function PurchaseRow({ id, children }: { id: string; children: React.Reac
       </button>
       {open && (
         <div className="flex gap-2 pb-2.5">
-          <button className={`${btnGhost} flex-1 text-attn`} disabled={pending}
+          <button className={`${btnDanger} flex-1`} disabled={pending}
             onClick={() => start(() => { void deletePurchase(id); })}>
             {pending ? t.common.loading : t.common.delete}
           </button>

@@ -48,6 +48,27 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   return { ok: true };
 }
 
+/** Заменить или добавить фото уже существующей вещи. */
+export async function setItemPhoto(itemId: string, dataUrl: string): Promise<void> {
+  const s = await guard();
+
+  const [row] = await db.select({ householdId: items.householdId })
+    .from(items).where(eq(items.id, itemId)).limit(1);
+  if (!row) return;
+  assertOurs(row.householdId, s);
+
+  if (!dataUrl.startsWith('data:image/')) return;
+  const comma = dataUrl.indexOf(',');
+  const data = dataUrl.slice(comma + 1);
+  const mime = dataUrl.slice(5, dataUrl.indexOf(';'));
+  if (data.length > MAX_PHOTO_BYTES) return;
+
+  await db.insert(itemPhotos).values({ itemId, data, mime, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: itemPhotos.itemId, set: { data, mime, updatedAt: new Date() } });
+
+  revalidatePath('/veshi');
+}
+
 export async function recordStock(itemId: string, kind: 'purchase' | 'check', qty: number): Promise<void> {
   const s = await guard();
   if (!Number.isFinite(qty) || qty < 0) return;
