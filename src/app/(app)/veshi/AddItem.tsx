@@ -4,6 +4,7 @@ import { addItem, type FormState } from '@/lib/actions/items';
 import { prepPhoto } from '@/lib/photo';
 import { Card, btnPrimary, btnGhost, btnPlain, inputCls, labelCls } from '@/components/ui';
 import { t } from '@/lib/strings';
+import { unitOptions } from '@/lib/units';
 
 type Mate = { id: string; name: string; index: number };
 
@@ -72,13 +73,21 @@ export function AddItem({ mates, meId }: { mates: Mate[]; meId: string }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>{t.things.unit}</span>
-            <input name="unit" className={inputCls} defaultValue="шт" autoComplete="off" />
+            <select name="unit" className={inputCls} defaultValue="шт">
+              {unitOptions().map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>{t.things.boughtQty}</span>
             <input name="qty" className={`${inputCls} num`} type="number" inputMode="decimal" min="0" step="0.5" placeholder="12" />
           </label>
         </div>
+
+        <label className="flex flex-col gap-1">
+          <span className={labelCls}>{t.things.price}</span>
+          <input name="price" className={`${inputCls} num`} type="number" inputMode="numeric"
+            min="0" placeholder="—" />
+        </label>
 
         <label className="flex flex-col gap-1">
           <span className={labelCls}>{t.things.interval}</span>

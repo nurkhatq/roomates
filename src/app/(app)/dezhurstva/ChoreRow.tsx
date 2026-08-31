@@ -12,7 +12,7 @@ export function ChoreRow({
 }: { id: string; name: string; st: ChoreState; mates: Mate[]; meId: string }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
-  const who = mates.find((m) => m.id === st.assignee);
+  const crew = st.assignees.map((id) => mates.find((m) => m.id === id)).filter(Boolean) as Mate[];
 
   // Только факты: сколько дней прошло и чья очередь. Ничего не краснеет.
   let when: string;
@@ -25,11 +25,17 @@ export function ChoreRow({
   return (
     <div className="border-b border-line last:border-b-0">
     <div className="flex items-center gap-3 py-2.5">
-      {who && <Avatar name={who.name} index={who.index} size={26} />}
+      {crew.length > 0 && (
+        <span className="flex shrink-0 -space-x-1.5">
+          {crew.map((m) => <Avatar key={m.id} name={m.name} index={m.index} size={26} />)}
+        </span>
+      )}
       <button className="min-w-0 flex-1 text-left" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <div className="truncate text-[14.5px]">{name}</div>
         <div className="truncate text-[11.5px] text-ink-3">
-          {who ? `${t.chores.turnOf} ${who.name}${who.id === meId ? ` (${t.common.you})` : ''}` : ''}
+          {crew.length
+            ? `${t.chores.turnOf} ${crew.map((m) => m.name + (m.id === meId ? ` (${t.common.you})` : '')).join(' и ')}`
+            : ''}
           {when ? ` · ${when}` : ''}
           {st.daysSince !== null ? ` · ${Math.floor(st.daysSince)} ${t.chores.daysSince}` : ''}
         </div>

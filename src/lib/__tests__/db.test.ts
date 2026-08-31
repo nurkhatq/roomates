@@ -22,12 +22,14 @@ async function freshDb() {
   const client = new PGlite();
   const db = drizzle(client, { schema });
 
+  // Накатываются ВСЕ миграции по порядку: с одной первой тесты начнут врать,
+  // как только схема поедет дальше.
   const dir = join(process.cwd(), 'drizzle');
-  const file = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()[0];
-  const sqlText = readFileSync(join(dir, file), 'utf8');
-  for (const stmt of sqlText.split('--> statement-breakpoint')) {
-    const s = stmt.trim();
-    if (s) await client.exec(s);
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+    for (const stmt of readFileSync(join(dir, file), 'utf8').split('--> statement-breakpoint')) {
+      const s = stmt.trim();
+      if (s) await client.exec(s);
+    }
   }
   return db as unknown as AnyDb;
 }
@@ -208,10 +210,12 @@ test('дежурства: последнее выполнение, очеред�
   assert.equal(tally.get(ids[2]), 0, 'кто не делал — должен быть нулём, а не отсутствовать');
 
   const st = choreState({
-    id: vac.id, name: rows[0].name, periodDays: rows[0].periodDays, order: rows[0].order,
+    id: vac.id, name: rows[0].name, periodDays: rows[0].periodDays,
+    groupSize: rows[0].groupSize, order: rows[0].order,
     lastDoneAt: last.doneAt, lastDoneBy: last.memberId,
   }, now);
   assert.equal(st.assignee, ids[1], 'очередь должна перейти следующему по кругу');
+  assert.deepEqual(st.assignees, [ids[1]], 'дело на одного — один человек в очереди');
   assert.ok(st.daysSince !== null && Math.abs(st.daysSince - 9) < 0.01);
 });
 

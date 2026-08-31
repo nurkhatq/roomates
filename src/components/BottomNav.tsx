@@ -10,6 +10,8 @@ const TABS = [
     icon: <><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z" /><path d="M4 8.5 12 13l8-4.5M12 13v7" /></> },
   { href: '/dezhurstva', label: t.nav.chores,
     icon: <><path d="M20 7 9.5 17.5 4 12" /><path d="M20 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4H15" /></> },
+  { href: '/ya', label: t.nav.me,
+    icon: <><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></> },
 ];
 
 export function BottomNav() {

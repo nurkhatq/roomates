@@ -14,11 +14,12 @@ export async function addChore(_prev: FormState, form: FormData): Promise<FormSt
   if (!name) return { error: 'Впиши название' };
 
   const periodDays = Math.max(1, Math.round(Number(form.get('periodDays')) || 7));
+  const groupSize = Math.max(1, Math.round(Number(form.get('groupSize')) || 1));
   const order = form.getAll('order').map(String);
   order.forEach((id) => assertMember(id, s));
 
   await db.insert(chores).values({
-    householdId: s.household.id, name, periodDays,
+    householdId: s.household.id, name, periodDays, groupSize,
     order: order.length ? order : s.roommates.map((m) => m.id),
   });
 

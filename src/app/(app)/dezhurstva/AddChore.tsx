@@ -30,10 +30,21 @@ export function AddChore({ mates }: { mates: Mate[] }) {
           <span className={labelCls}>{t.chores.name}</span>
           <input name="name" className={inputCls} required autoFocus autoComplete="off" placeholder="Пропылесосить" />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>{t.chores.period}</span>
-          <input name="periodDays" className={`${inputCls} num`} type="number" inputMode="numeric" min="1" defaultValue={7} />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className={labelCls}>{t.chores.period}</span>
+            <input name="periodDays" className={`${inputCls} num`} type="number" inputMode="numeric" min="1" defaultValue={7} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={labelCls}>{t.chores.groupSize}</span>
+            <select name="groupSize" className={inputCls} defaultValue="1">
+              {mates.map((_, i) => (
+                <option key={i + 1} value={i + 1}>{i + 1}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <span className="-mt-2 text-[11.5px] text-ink-3">{t.chores.groupHint}</span>
         <div className="flex flex-col gap-1.5">
           <span className={labelCls}>{t.chores.order}</span>
           <div className="flex flex-col">

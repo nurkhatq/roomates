@@ -105,3 +105,44 @@ test('пора закупаться, когда кончается на днях
   assert.ok(buySoon(s, 3), `дней осталось ${s.daysLeft}`);
   assert.equal(buySoon(stockState([{ kind: 'purchase', qty: 50, at: ago(1) }], 7, NOW), 3), false);
 });
+
+test('полным запасом считается самая большая разовая закупка', () => {
+  const ev: StockEvent[] = [
+    { kind: 'purchase', qty: 12, at: ago(20) },
+    { kind: 'purchase', qty: 4, at: ago(10) },
+    { kind: 'check', qty: 6, at: ago(1) },
+  ];
+  const s = stockState(ev, 7, NOW);
+  assert.equal(s.capacity, 12);
+  assert.equal(s.level, 0.5);
+});
+
+test('без закупок уровень неизвестен — полоску рисовать не из чего', () => {
+  const s = stockState([{ kind: 'check', qty: 5, at: ago(1) }], 7, NOW);
+  assert.equal(s.capacity, null);
+  assert.equal(s.level, null);
+});
+
+test('пустая вещь попадает в закуп даже без известного расхода', () => {
+  const s = stockState([
+    { kind: 'purchase', qty: 10, at: ago(9) },
+    { kind: 'check', qty: 0, at: ago(1) },
+  ], 7, NOW);
+  assert.equal(s.ratePerDay, null, 'расход тут посчитать не из чего');
+  assert.equal(buySoon(s), true);
+});
+
+test('меньше трети пачки — тоже в закуп', () => {
+  const s = stockState([
+    { kind: 'purchase', qty: 12, at: ago(5) },
+    { kind: 'check', qty: 3, at: ago(1) },
+  ], 7, NOW);
+  assert.ok(s.level !== null && s.level < 0.3);
+  assert.equal(buySoon(s), true);
+});
+
+test('полная полка в закуп не просится', () => {
+  const s = stockState([{ kind: 'purchase', qty: 12, at: ago(1) }], 7, NOW);
+  assert.equal(s.level, 1);
+  assert.equal(buySoon(s), false);
+});

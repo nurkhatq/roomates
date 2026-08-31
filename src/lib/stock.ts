@@ -28,6 +28,10 @@ export type StockState = {
   confidence: 'none' | 'rough' | 'good';
   /** Пересчёты, где расход вышел отрицательным — значит закупку не записали. */
   unloggedPurchases: number;
+  /** Сколько считается полным запасом: самая большая разовая закупка. */
+  capacity: number | null;
+  /** Насколько полно сейчас, от 0 до 1. Для полоски на карточке. */
+  level: number | null;
 };
 
 const DAY = 86_400_000;
@@ -46,7 +50,8 @@ export function stockState(
   const sorted = [...events].sort((a, b) => a.at.getTime() - b.at.getTime());
   if (sorted.length === 0) {
     return { current: null, ratePerDay: null, daysLeft: null, runsOutOn: null,
-             nextCheckOn: null, confidence: 'none', unloggedPurchases: 0 };
+             nextCheckOn: null, confidence: 'none', unloggedPurchases: 0,
+             capacity: null, level: null };
   }
 
   // Проходим по событиям, собирая замеры расхода между соседними пересчётами.
@@ -95,6 +100,14 @@ export function stockState(
   const confidence: StockState['confidence'] =
     samples.length === 0 ? 'none' : samples.length === 1 ? 'rough' : 'good';
 
+  // Полным запасом считаем самую большую разовую закупку: сколько берут за раз,
+  // столько и есть «полка забита». Первый закуп задаёт эту величину сам.
+  const purchases = sorted.filter(
+    (e): e is Extract<StockEvent, { kind: 'purchase' }> => e.kind === 'purchase',
+  );
+  const capacity = purchases.length ? Math.max(...purchases.map((e) => e.qty)) : null;
+  const level = capacity && capacity > 0 ? Math.max(0, Math.min(1, current / capacity)) : null;
+
   const daysLeft = ratePerDay && ratePerDay > 0 ? current / ratePerDay : null;
   const runsOutOn = daysLeft === null ? null : new Date(now.getTime() + daysLeft * DAY);
 
@@ -103,24 +116,28 @@ export function stockState(
   const fallback = new Date(lastEventAt.getTime() + checkIntervalDays * DAY);
   let nextCheckOn = fallback;
   if (ratePerDay && ratePerDay > 0) {
-    const typicalPack = Math.max(
-      1,
-      ...sorted.filter((e): e is Extract<StockEvent, { kind: 'purchase' }> => e.kind === 'purchase')
-        .map((e) => e.qty),
-    );
+    const typicalPack = Math.max(1, capacity ?? 1);
     const lowAt = Math.max(0, current - typicalPack * LOW) / ratePerDay; // дней до «мало»
     const proposed = new Date(now.getTime() + lowAt * DAY);
     const floor = new Date(now.getTime() + MIN_GAP_DAYS * DAY);
     nextCheckOn = new Date(Math.min(Math.max(proposed.getTime(), floor.getTime()), fallback.getTime()));
   }
 
-  return { current, ratePerDay, daysLeft, runsOutOn, nextCheckOn, confidence, unloggedPurchases: unlogged };
+  return { current, ratePerDay, daysLeft, runsOutOn, nextCheckOn, confidence,
+           unloggedPurchases: unlogged, capacity, level };
 }
 
 /** Пора ли просить пересчёт. */
 export const checkDue = (s: StockState, now: Date = new Date()) =>
   s.nextCheckOn !== null && now.getTime() >= s.nextCheckOn.getTime();
 
-/** Пора ли закупаться: кончится раньше, чем через leadDays. */
-export const buySoon = (s: StockState, leadDays = 3) =>
-  s.daysLeft !== null && s.daysLeft <= leadDays;
+/**
+ * Пора ли закупаться. Расход известен — смотрим, кончится ли на днях.
+ * Расхода ещё нет — смотрим на остаток: пусто или меньше трети пачки.
+ */
+export function buySoon(s: StockState, leadDays = 3): boolean {
+  if (s.daysLeft !== null) return s.daysLeft <= leadDays;
+  if (s.current === null) return false;
+  if (s.current <= 0) return true;
+  return s.level !== null && s.level <= LOW;
+}

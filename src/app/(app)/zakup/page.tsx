@@ -1,9 +1,10 @@
 import { db } from '@/db';
 import { requireSession } from '@/lib/session';
-import { householdBalances, recentPurchases } from '@/lib/queries';
+import { householdBalances, recentPurchases, itemsWithEvents } from '@/lib/queries';
+import { stockState, buySoon } from '@/lib/stock';
 import { settle, money } from '@/lib/money';
 import { Avatar, Card, Eyebrow, Empty, Dot } from '@/components/ui';
-import { AddPurchase } from './AddPurchase';
+import { AddPurchase, type ShelfItem } from './AddPurchase';
 import { SettleButton } from './SettleButton';
 import { PurchaseRow } from './PurchaseRow';
 import { t } from '@/lib/strings';
@@ -23,6 +24,18 @@ export default async function ZakupPage() {
   const allSquare = transfers.length === 0;
 
   const { rows: recent, sharesBy } = await recentPurchases(db, hid, HISTORY_LIMIT);
+
+  // Полка нужна прямо здесь: закуп должен предлагать то, что кончается,
+  // а не заставлять вспоминать это по дороге в магазин.
+  const { rows: itemRows, eventsBy } = await itemsWithEvents(db, hid, 12);
+  const now = new Date();
+  const shelf: ShelfItem[] = itemRows
+    .filter((r) => r.ownerId === null || r.ownerId === s.member.id)
+    .map((r) => ({
+      id: r.id, name: r.name, unit: r.unit, price: r.price ?? null,
+      needed: buySoon(stockState(eventsBy.get(r.id) ?? [], r.checkIntervalDays, now), 3),
+    }));
+  const toBuy = shelf.filter((i) => i.needed);
 
   const dateFmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' });
 
@@ -75,7 +88,25 @@ export default async function ZakupPage() {
         </Card>
       )}
 
-      <AddPurchase roommates={s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i }))} meId={s.member.id} />
+      {toBuy.length > 0 && (
+        <Card>
+          <Eyebrow>{t.things.toBuy}</Eyebrow>
+          <div className="flex flex-wrap gap-1.5">
+            {toBuy.map((i) => (
+              <span key={i.id} className="rounded-md border border-attn-line bg-attn-bg px-2 py-1 text-[12.5px] text-attn">
+                {i.name}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2.5 text-[12px] text-ink-3">{t.things.toBuyHint}</p>
+        </Card>
+      )}
+
+      <AddPurchase
+        roommates={s.roommates.map((m, i) => ({ id: m.id, name: m.name, index: i }))}
+        meId={s.member.id}
+        shelf={shelf}
+      />
 
       <Card>
         <Eyebrow>{t.money.history}</Eyebrow>

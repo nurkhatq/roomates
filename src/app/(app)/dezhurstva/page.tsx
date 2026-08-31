@@ -20,7 +20,7 @@ export default async function ChoresPage() {
   const enriched = rows.map((c) => {
     const last = lastBy.get(c.id);
     const chore: Chore = {
-      id: c.id, name: c.name, periodDays: c.periodDays,
+      id: c.id, name: c.name, periodDays: c.periodDays, groupSize: c.groupSize,
       order: c.order.length ? c.order : mates.map((m) => m.id),
       lastDoneAt: last?.doneAt ?? null,
       lastDoneBy: last?.memberId ?? null,
@@ -28,7 +28,7 @@ export default async function ChoresPage() {
     return { row: c, chore, st: choreState(chore, now) };
   });
 
-  const mine = enriched.filter((e) => e.st.assignee === s.member.id);
+  const mine = enriched.filter((e) => e.st.assignees.includes(s.member.id));
 
   return (
     <>

@@ -19,12 +19,15 @@ export async function addItem(_prev: FormState, form: FormData): Promise<FormSta
   const unit = String(form.get('unit') ?? 'шт').trim() || 'шт';
   const interval = Math.max(1, Math.round(Number(form.get('interval')) || 7));
 
+  const priceRaw = String(form.get('price') ?? '').trim();
+  const price = priceRaw === '' ? null : Math.max(0, Math.round(Number(priceRaw) || 0));
+
   const ownerRaw = String(form.get('ownerId') ?? '');
   const ownerId = ownerRaw === '' ? null : ownerRaw;
   if (ownerId) assertMember(ownerId, s);
 
   const [row] = await db.insert(items).values({
-    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval,
+    householdId: s.household.id, ownerId, name, unit, checkIntervalDays: interval, price,
   }).returning({ id: items.id });
 
   const photo = String(form.get('photo') ?? '');
@@ -79,6 +82,29 @@ export async function recordStock(itemId: string, kind: 'purchase' | 'check', qt
   assertOurs(row.householdId, s);
 
   await db.insert(stockEvents).values({ itemId, kind, qty, memberId: s.member.id });
+  revalidatePath('/veshi');
+}
+
+/** Правка карточки вещи: название, единица, цена, срок пересчёта. */
+export async function updateItem(
+  itemId: string,
+  patch: { name?: string; unit?: string; price?: number | null; checkIntervalDays?: number },
+): Promise<void> {
+  const s = await guard();
+
+  const [row] = await db.select({ householdId: items.householdId })
+    .from(items).where(eq(items.id, itemId)).limit(1);
+  if (!row) return;
+  assertOurs(row.householdId, s);
+
+  const next: Partial<typeof items.$inferInsert> = {};
+  if (patch.name !== undefined && patch.name.trim()) next.name = patch.name.trim();
+  if (patch.unit !== undefined && patch.unit.trim()) next.unit = patch.unit.trim();
+  if (patch.price !== undefined) next.price = patch.price === null ? null : Math.max(0, Math.round(patch.price));
+  if (patch.checkIntervalDays !== undefined) next.checkIntervalDays = Math.max(1, Math.round(patch.checkIntervalDays));
+  if (Object.keys(next).length === 0) return;
+
+  await db.update(items).set(next).where(eq(items.id, itemId));
   revalidatePath('/veshi');
 }
 

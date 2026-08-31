@@ -1,7 +1,8 @@
 import { sql, eq, and, isNull, asc, desc, lte, inArray, getTableColumns } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import * as schema from '@/db/schema';
-import { purchases, purchaseShares, items, itemPhotos, stockEvents, chores, choreEvents } from '@/db/schema';
+import { purchases, purchaseShares, items, itemPhotos, stockEvents, chores, choreEvents,
+  householdPhotos, memberPhotos } from '@/db/schema';
 
 /**
  * Запросы вынесены из страниц, чтобы их можно было прогнать на настоящем
@@ -133,4 +134,59 @@ export async function choresWithHistory(db: AnyDb, householdId: string, memberId
   for (const l of lasts) lastBy.set(l.choreId, { memberId: l.memberId, doneAt: new Date(l.doneAt) });
   for (const c of counts) tally.set(c.memberId, Number(c.n));
   return { rows, lastBy, tally };
+}
+
+/** Версия фото в ссылке заставляет браузер забрать новую картинку после замены. */
+export async function photoVersions(db: AnyDb, householdId: string, memberIds: string[]) {
+  const [house, avatars] = await Promise.all([
+    db.select({ v: sql<number>`extract(epoch from ${householdPhotos.updatedAt})::bigint` })
+      .from(householdPhotos).where(eq(householdPhotos.householdId, householdId)).limit(1),
+    memberIds.length
+      ? db.select({ id: memberPhotos.memberId, v: sql<number>`extract(epoch from ${memberPhotos.updatedAt})::bigint` })
+          .from(memberPhotos).where(inArray(memberPhotos.memberId, memberIds))
+      : Promise.resolve([] as { id: string; v: number }[]),
+  ]);
+  return {
+    house: house.length ? Number(house[0].v) : null,
+    byMember: new Map(avatars.map((a) => [a.id, Number(a.v)])),
+  };
+}
+
+export type Action =
+  | { kind: 'paid'; at: Date; label: string; amount: number }
+  | { kind: 'chore'; at: Date; label: string }
+  | { kind: 'stock'; at: Date; label: string; qty: number; unit: string; check: boolean };
+
+/** Что человек делал по квартире: заплатил, продежурил, пересчитал, докупил. */
+export async function myActivity(
+  db: AnyDb, householdId: string, memberId: string, limit: number,
+): Promise<Action[]> {
+  const [paid, did, counted] = await Promise.all([
+    db.select({ at: purchases.boughtAt, note: purchases.note, total: purchases.total, kind: purchases.kind })
+      .from(purchases)
+      .where(and(eq(purchases.householdId, householdId), eq(purchases.payerId, memberId)))
+      .orderBy(desc(purchases.boughtAt)).limit(limit),
+    db.select({ at: choreEvents.doneAt, name: chores.name })
+      .from(choreEvents).innerJoin(chores, eq(chores.id, choreEvents.choreId))
+      .where(and(eq(chores.householdId, householdId), eq(choreEvents.memberId, memberId)))
+      .orderBy(desc(choreEvents.doneAt)).limit(limit),
+    db.select({ at: stockEvents.at, name: items.name, unit: items.unit, qty: stockEvents.qty, k: stockEvents.kind })
+      .from(stockEvents).innerJoin(items, eq(items.id, stockEvents.itemId))
+      .where(and(eq(items.householdId, householdId), eq(stockEvents.memberId, memberId)))
+      .orderBy(desc(stockEvents.at)).limit(limit),
+  ]);
+
+  const out: Action[] = [
+    ...paid.map((p) => ({
+      kind: 'paid' as const, at: new Date(p.at),
+      label: p.kind === 'settlement' ? 'перевод' : (p.note || 'закуп'),
+      amount: Number(p.total),
+    })),
+    ...did.map((c) => ({ kind: 'chore' as const, at: new Date(c.at), label: c.name })),
+    ...counted.map((e) => ({
+      kind: 'stock' as const, at: new Date(e.at), label: e.name,
+      qty: Number(e.qty), unit: e.unit, check: e.k === 'check',
+    })),
+  ];
+  return out.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
 }

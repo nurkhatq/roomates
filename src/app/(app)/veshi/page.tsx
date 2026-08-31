@@ -28,7 +28,7 @@ export default async function VeshiPage() {
       return {
         item: {
           id: r.id, name: r.name, unit: r.unit, ownerId: r.ownerId,
-          checkIntervalDays: r.checkIntervalDays,
+          checkIntervalDays: r.checkIntervalDays, price: r.price ?? null,
           hasPhoto: Boolean(r.hasPhoto), photoVersion: Number(r.photoVersion) || 0,
         } satisfies CardItem,
         st,

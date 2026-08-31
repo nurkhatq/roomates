@@ -1,8 +1,8 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { db, purchases, purchaseShares } from '@/db';
+import { db, purchases, purchaseShares, purchaseItems, items, stockEvents } from '@/db';
 import { sharesEqual } from '@/lib/money';
 import { guard, assertOurs, assertMember } from './guard';
 import { t } from '@/lib/strings';
@@ -26,6 +26,34 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
   const dateRaw = String(form.get('date') ?? '');
   const boughtAt = dateRaw ? new Date(`${dateRaw}T12:00:00`) : new Date();
 
+  // Что именно взяли с полки. Пустой список — обычный закуп без разбора.
+  let lines: { itemId: string; qty: number; amount: number }[] = [];
+  try {
+    const raw = String(form.get('lines') ?? '[]');
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      lines = parsed
+        .map((l) => l as { itemId?: unknown; qty?: unknown; amount?: unknown })
+        .map((l) => ({
+          itemId: String(l.itemId ?? ''),
+          qty: Number(l.qty),
+          amount: Math.max(0, Math.round(Number(l.amount) || 0)),
+        }))
+        .filter((l) => l.itemId && Number.isFinite(l.qty) && l.qty > 0);
+    }
+  } catch {
+    lines = []; // битый список не должен ронять сам закуп
+  }
+
+  // Вещи должны быть из этой же квартиры — id приходит с клиента.
+  if (lines.length) {
+    const ids = [...new Set(lines.map((l) => l.itemId))];
+    const owned = await db.select({ id: items.id, householdId: items.householdId })
+      .from(items).where(inArray(items.id, ids));
+    const ours = new Set(owned.filter((o) => o.householdId === s.household.id).map((o) => o.id));
+    lines = lines.filter((l) => ours.has(l.itemId));
+  }
+
   const shares = sharesEqual(total, participants);
 
   const [row] = await db.insert(purchases).values({
@@ -37,7 +65,31 @@ export async function addPurchase(_prev: FormState, form: FormData): Promise<For
     shares.map((sh) => ({ purchaseId: row.id, memberId: sh.userId, amount: sh.amount })),
   );
 
+  if (lines.length) {
+    await db.insert(purchaseItems).values(
+      lines.map((l) => ({ purchaseId: row.id, itemId: l.itemId, qty: l.qty, amount: l.amount })),
+    );
+
+    // Закуп сразу пополняет остаток — иначе после магазина пришлось бы
+    // отдельно заходить в каждую вещь и вписывать то же самое второй раз.
+    await db.insert(stockEvents).values(
+      lines.map((l) => ({
+        itemId: l.itemId, kind: 'purchase' as const, qty: l.qty,
+        at: boughtAt, memberId: s.member.id,
+      })),
+    );
+
+    // Цена запоминается с последнего закупа, где её указали.
+    for (const l of lines) {
+      if (l.amount > 0 && l.qty > 0) {
+        await db.update(items).set({ price: Math.round(l.amount / l.qty) })
+          .where(eq(items.id, l.itemId));
+      }
+    }
+  }
+
   revalidatePath('/zakup');
+  revalidatePath('/veshi');
   return { ok: true };
 }
 
